@@ -122,6 +122,7 @@ const firebaseConfig = {
   messagingSenderId: "262854448835",
   appId: "1:262854448835:web:b579f71156bbdd43687476"
 };
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
@@ -232,8 +233,9 @@ function renderBank(){
   <div class="card"><h2>Add a question</h2>
     <label>Question</label><textarea id="qf-text" placeholder="e.g. Which of the following is a current asset?"></textarea>
     <label>Topic (optional)</label><input type="text" id="qf-topic" placeholder="e.g. Financial Accounting">
-    <label>Options</label>
-    ${[0,1,2,3].map(i=>`<div class="opt-row"><input type="radio" name="qf-correct" value="${i}" ${i===0?'checked':''}><input type="text" id="qf-opt${i}" placeholder="Option ${i+1}"></div>`).join('')}
+    <label>Options (at least 2 needed, up to 4 — click the circle next to the correct one)</label>
+    ${[0,1,2,3].map(i=>`<div class="opt-row"><input type="radio" name="qf-correct" value="${i}" title="Mark as correct answer" ${i===0?'checked':''}><input type="text" id="qf-opt${i}" placeholder="Option ${i+1}${i>=2?' (optional)':''}"></div>`).join('')}
+    <p class="note">The filled circle marks the correct answer — click the circle next to whichever option is correct before submitting.</p>
     <label>Explanation (optional)</label><textarea id="qf-expl"></textarea>
     <button class="btn gold" id="qf-submit" onclick="submitQuestion()">Add to shared bank</button>
   </div>
@@ -256,14 +258,21 @@ window.submitQuestion = async () => {
   const text=document.getElementById('qf-text').value.trim();
   const topic=document.getElementById('qf-topic').value.trim();
   const expl=document.getElementById('qf-expl').value.trim();
-  const opts=[0,1,2,3].map(i=>document.getElementById('qf-opt'+i).value.trim());
-  const correct=parseInt(document.querySelector('input[name=qf-correct]:checked').value,10);
+  const rawOpts=[0,1,2,3].map(i=>document.getElementById('qf-opt'+i).value.trim());
+  const rawCorrect=parseInt(document.querySelector('input[name=qf-correct]:checked').value,10);
   if(!text){alert('Enter a question');return;}
-  if(opts.some(o=>!o)){alert('Fill in all four options');return;}
+
+  const filledIndices = rawOpts.map((o,i)=>o?i:-1).filter(i=>i!==-1);
+  if(filledIndices.length<2){ alert('Fill in at least 2 options'); return; }
+  if(!rawOpts[rawCorrect]){ alert('The correct-answer circle is next to an empty option — pick the circle next to an option you actually filled in'); return; }
+
+  const options = filledIndices.map(i=>rawOpts[i]);
+  const correctIndex = filledIndices.indexOf(rawCorrect);
+
   document.getElementById('qf-submit').disabled=true;
   try{
     await addDoc(collection(db,'questions'), {
-      question:text, options:opts, correctIndex:correct, topic:topic||'General', explanation:expl,
+      question:text, options, correctIndex, topic:topic||'General', explanation:expl,
       source:'manual', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email, createdAt:serverTimestamp()
     });
     setTab('bank');
