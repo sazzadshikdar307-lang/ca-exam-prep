@@ -5,79 +5,133 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CA Exam Prep</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#16233A; --ink-soft:#2B3B54; --paper:#F6F1E4; --paper-alt:#EFE7D3; --paper-line:#DDD3B8;
-    --gold:#B8912F; --gold-soft:#E7D6A0; --green:#2F6B4F; --green-bg:#E1EEE4; --red:#A63A2E; --red-bg:#F5E2DE; --muted:#6B6456;
+    /* Ledger paper, ink, and brass-seal palette — grounded in accounting stationery,
+       not the usual cream+terracotta or dark+neon defaults. */
+    --paper:#EEF2E9; --paper-alt:#E4EADD; --line:#C4D0BC;
+    --ink:#1B2B29; --ink-soft:#33463F; --muted:#5E6C60;
+    --brass:#8A6A2F; --brass-soft:#D9C99A;
+    --seal:#7A3430; --seal-bg:#F1E1DD;
+    --approve:#2E6B4C; --approve-bg:#DEEAE0;
+    --surface:#FBFAF5;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;
-    background-image:linear-gradient(var(--paper-line) 1px, transparent 1px); background-size:100% 34px;}
-  h1,h2,.serif{font-family:'Noto Serif',serif;}
-  .app{max-width:920px;margin:0 auto;padding:0 0 60px;}
-  .cover{background:var(--ink);color:var(--paper);padding:22px 24px;position:relative;border-bottom:6px solid var(--gold);
-    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
-  .cover h1{margin:0;font-size:24px;}
-  .cover p{margin:4px 0 0;color:var(--gold-soft);font-size:13px;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  h1,h2,.serif{font-family:'Source Serif 4',serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .app{max-width:900px;margin:0 auto;padding:0 0 70px;}
+
+  /* ---- Masthead ---- */
+  .cover{background:var(--ink);color:var(--paper);padding:26px 26px 20px;position:relative;
+    border-bottom:6px double var(--brass-soft);
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;}
+  .cover h1{margin:0;font-size:25px;font-weight:600;letter-spacing:.2px;}
+  .cover .tagline{margin:6px 0 0;color:var(--brass-soft);font-size:13px;}
+  .cover .refline{font-family:'JetBrains Mono',monospace;font-size:11px;color:#93A69C;margin-top:3px;}
   .userbox{display:flex;align-items:center;gap:10px;}
-  .userbox img{width:34px;height:34px;border-radius:50%;border:2px solid var(--gold-soft);}
+  .userbox img{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--brass-soft);}
   .userbox span{font-size:13px;color:var(--paper-alt);}
-  nav{display:flex;flex-wrap:wrap;background:var(--paper-alt);border-bottom:1px solid var(--paper-line);position:sticky;top:0;z-index:5;}
-  nav button{flex:1 1 auto;min-width:110px;background:transparent;border:none;border-right:1px solid var(--paper-line);
-    padding:12px 8px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;}
+
+  /* ---- Nav: ledger index tabs ---- */
+  nav{display:flex;flex-wrap:wrap;background:var(--paper-alt);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;}
+  nav button{flex:1 1 auto;min-width:100px;background:transparent;border:none;border-right:1px solid var(--line);
+    padding:12px 8px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;
+    border-bottom:3px solid transparent;transition:border-color .15s, color .15s;}
   nav button:last-child{border-right:none;}
-  nav button.active{background:var(--ink);color:var(--paper);}
-  main{padding:22px 20px;}
-  .card{background:#FFFDF7;border:1px solid var(--paper-line);border-radius:6px;padding:18px;margin-bottom:16px;}
-  .card h2{font-size:17px;margin:0 0 12px;}
-  label{display:block;font-size:13.5px;font-weight:600;margin:12px 0 5px;color:var(--ink-soft);}
-  input[type=text],input[type=number],textarea,select{width:100%;padding:9px 10px;border:1px solid var(--paper-line);
-    border-radius:4px;font-size:14.5px;font-family:'Inter',sans-serif;}
+  nav button.active{color:var(--ink);border-bottom-color:var(--seal);}
+  nav button:hover:not(.active){color:var(--ink-soft);}
+
+  main{padding:24px 22px;}
+
+  /* ---- Sections: hairline rule + left mark, not boxed shadow cards ---- */
+  .card{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--brass);
+    border-radius:2px;padding:20px;margin-bottom:18px;}
+  .card h2{font-size:16.5px;margin:0 0 14px;font-weight:600;}
+
+  label{display:block;font-size:13px;font-weight:600;margin:14px 0 5px;color:var(--ink-soft);}
+  input[type=text],input[type=number],textarea,select{width:100%;padding:9px 10px;border:1px solid var(--line);
+    border-radius:2px;font-size:14.5px;font-family:'Inter',sans-serif;background:#fff;color:var(--ink);}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--brass-soft);outline-offset:1px;border-color:var(--brass);}
   textarea{resize:vertical;min-height:60px;}
-  input[type=file]{width:100%;padding:9px 10px;border:1px dashed var(--gold);border-radius:4px;background:var(--gold-soft);}
-  .opt-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  input[type=file]{width:100%;padding:9px 10px;border:1px dashed var(--brass);border-radius:2px;background:var(--paper-alt);}
+  .opt-row{display:flex;align-items:center;gap:9px;margin-top:7px;padding-bottom:7px;border-bottom:1px solid var(--paper-alt);}
   .opt-row input[type=text]{flex:1;}
-  .btn{display:inline-block;padding:10px 18px;background:var(--ink);color:var(--paper);border:none;border-radius:4px;
-    font-weight:600;font-size:14.5px;cursor:pointer;margin-top:14px;}
-  .btn.gold{background:var(--gold);color:var(--ink);}
+  .opt-row input[type=checkbox]{width:17px;height:17px;accent-color:var(--approve);flex-shrink:0;}
+
+  .btn{display:inline-block;padding:10px 18px;background:var(--ink);color:var(--paper);border:1px solid var(--ink);
+    border-radius:2px;font-weight:600;font-size:14px;cursor:pointer;margin-top:14px;transition:opacity .15s;}
+  .btn:hover{opacity:.88;}
+  .btn.gold{background:var(--brass);color:#fff;border-color:var(--brass);}
   .btn.outline{background:transparent;border:1px solid var(--ink);color:var(--ink);}
-  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
   .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
-  .qitem{border-bottom:1px dashed var(--paper-line);padding:12px 0;}
+
+  .qitem{border-bottom:1px solid var(--paper-alt);padding:13px 0;}
   .qitem:last-child{border-bottom:none;}
   .qtext{font-weight:600;font-size:14.5px;}
-  .qopts{font-size:13px;color:var(--muted);margin-top:6px;}
-  .qmeta{font-size:11.5px;color:var(--gold);margin-top:4px;font-weight:600;}
-  .tag{display:inline-block;background:var(--gold-soft);color:#5c471a;font-size:11px;padding:2px 8px;border-radius:10px;margin-right:6px;font-weight:600;}
-  .del-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:600;}
+  .qopts{font-size:13px;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+  .qmeta{font-size:11.5px;color:var(--brass);margin-top:5px;font-weight:600;}
+  .tag{display:inline-block;background:var(--paper-alt);color:var(--ink-soft);border:1px solid var(--line);
+    font-size:11px;padding:2px 8px;border-radius:2px;margin-right:6px;font-weight:600;}
+  .del-btn{background:none;border:none;color:var(--seal);cursor:pointer;font-size:13px;font-weight:600;}
   .empty{text-align:center;padding:30px 10px;color:var(--muted);}
-  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}
-  .stat{background:var(--ink);color:var(--paper);border-radius:6px;padding:14px;text-align:center;}
-  .stat .num{font-size:26px;font-weight:700;font-family:'Noto Serif',serif;color:var(--gold-soft);}
-  .stat .lbl{font-size:12.5px;margin-top:4px;color:var(--paper-alt);}
-  .progress-wrap{background:var(--paper-alt);border-radius:6px;height:8px;overflow:hidden;margin-bottom:16px;}
-  .progress-bar{background:var(--gold);height:100%;transition:width .3s;}
-  .timer{display:inline-flex;background:var(--ink);color:var(--gold-soft);padding:4px 12px;border-radius:14px;font-weight:600;font-size:13px;float:right;}
-  .exam-q{font-size:17px;font-weight:700;margin:10px 0 16px;font-family:'Noto Serif',serif;}
-  .exam-opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--paper-line);border-radius:5px;
-    padding:11px 14px;margin-bottom:10px;font-size:14.5px;cursor:pointer;}
+
+  /* ---- Stat strip: a statement summary line, not colored tiles ---- */
+  .stat-grid{display:flex;flex-wrap:wrap;border-top:1px solid var(--line);border-bottom:3px double var(--line);}
+  .stat{flex:1 1 130px;text-align:center;padding:14px 8px;border-right:1px solid var(--line);}
+  .stat:last-child{border-right:none;}
+  .stat .num{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;color:var(--ink);}
+  .stat .lbl{font-size:12px;margin-top:4px;color:var(--muted);}
+
+  .progress-wrap{background:var(--paper-alt);height:4px;overflow:hidden;margin-bottom:18px;}
+  .progress-bar{background:var(--brass);height:100%;transition:width .3s;}
+  .timer{display:inline-flex;font-family:'JetBrains Mono',monospace;background:var(--ink);color:var(--brass-soft);
+    padding:4px 12px;border-radius:2px;font-weight:600;font-size:13px;float:right;}
+  .exam-q{font-size:17px;font-weight:600;margin:10px 0 18px;font-family:'Source Serif 4',serif;line-height:1.5;}
+
+  /* ---- Exam options: checklist rows, stamp badges on reveal ---- */
+  .exam-opt{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:2px;
+    padding:12px 46px 12px 14px;margin-bottom:9px;font-size:14.5px;cursor:pointer;position:relative;color:var(--ink);}
+  .exam-opt::before{content:"";position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    width:14px;height:14px;border:1.5px solid var(--muted);border-radius:2px;}
+  .exam-opt{padding-left:38px;}
   .exam-opt.selected{border-color:var(--ink);background:var(--paper-alt);}
-  .exam-opt.correct{border-color:var(--green);background:var(--green-bg);}
-  .exam-opt.wrong{border-color:var(--red);background:var(--red-bg);}
-  .hist-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--paper-line);font-size:13.5px;}
+  .exam-opt.selected::before{background:var(--ink);border-color:var(--ink);}
+  .exam-opt.correct{border-color:var(--approve);background:var(--approve-bg);}
+  .exam-opt.correct::before{background:var(--approve);border-color:var(--approve);}
+  .exam-opt.wrong{border-color:var(--seal);background:var(--seal-bg);}
+  .exam-opt.wrong::before{background:var(--seal);border-color:var(--seal);}
+  .exam-opt.correct::after{content:"Correct";position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(-4deg);
+    font-family:'Source Serif 4',serif;font-size:11px;font-weight:600;color:var(--approve);
+    border:1.5px solid var(--approve);border-radius:2px;padding:1px 7px;}
+  .exam-opt.wrong::after{content:"Your answer";position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(-4deg);
+    font-family:'Source Serif 4',serif;font-size:11px;font-weight:600;color:var(--seal);
+    border:1.5px solid var(--seal);border-radius:2px;padding:1px 7px;}
+
+  .hist-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--paper-alt);font-size:13.5px;}
+  .hist-row:last-child{border-bottom:none;}
+  .hist-score{font-family:'JetBrains Mono',monospace;font-weight:600;}
+
   .loading{display:flex;align-items:center;gap:10px;color:var(--muted);margin-top:12px;}
-  .spinner{width:16px;height:16px;border:2px solid var(--paper-line);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+  .spinner{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--brass);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  .gen-item{border:1px solid var(--paper-line);border-radius:5px;padding:10px 12px;margin-bottom:8px;background:#fff;}
+  .gen-item{border:1px solid var(--line);border-radius:2px;padding:10px 12px;margin-bottom:8px;background:#fff;}
   .gen-item label{display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:0;font-size:13.5px;}
-  .note{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5;}
+  .note{font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.55;}
+
   .login-wrap{display:flex;align-items:center;justify-content:center;min-height:70vh;padding:20px;}
-  .login-card{background:#FFFDF7;border:1px solid var(--paper-line);border-radius:8px;padding:36px 30px;max-width:380px;text-align:center;}
+  .login-card{background:var(--surface);border:1px solid var(--line);border-top:3px double var(--brass);
+    border-radius:2px;padding:38px 32px;max-width:380px;text-align:center;}
   .login-card h2{margin-top:0;}
-  .google-btn{display:inline-flex;align-items:center;gap:10px;background:#fff;border:1px solid #ccc;border-radius:6px;
-    padding:10px 20px;font-weight:600;cursor:pointer;font-size:14.5px;margin-top:16px;}
-  .config-warning{background:var(--red-bg);border:1px solid var(--red);color:var(--red);padding:14px;border-radius:6px;margin:16px;font-size:13.5px;}
+  .google-btn{display:inline-flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:2px;
+    padding:10px 20px;font-weight:600;cursor:pointer;font-size:14.5px;margin-top:18px;color:var(--ink);}
+  .google-btn:hover{border-color:var(--brass);}
+  .config-warning{background:var(--seal-bg);border:1px solid var(--seal);color:var(--seal);padding:14px;border-radius:2px;margin:16px;font-size:13.5px;}
+  .result-score{text-align:center;padding-bottom:6px;}
+  .result-score .big{font-family:'JetBrains Mono',monospace;font-size:38px;font-weight:600;color:var(--ink);
+    display:inline-block;padding-bottom:6px;border-bottom:4px double var(--ink);}
 </style>
 </head>
 <body>
@@ -85,7 +139,8 @@
   <div class="cover">
     <div>
       <h1>CA Exam Prep</h1>
-      <p>Shared question bank, your own private scores</p>
+      <p class="tagline">Shared question bank, your own private scores</p>
+      <p class="refline" id="ledgerDate"></p>
     </div>
     <div class="userbox" id="userbox" style="display:none">
       <img id="userphoto" src="" alt="">
@@ -132,6 +187,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let app, auth, db, currentUser = null;
+
+document.getElementById('ledgerDate').textContent =
+  'As of ' + new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 
 const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
 if (!isConfigured) {
@@ -204,6 +262,8 @@ async function loadForTab(id){
 
 function topicsOf(list){ const s=new Set(); list.forEach(q=>s.add(q.topic||'General')); return Array.from(s); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function getCorrectIndices(q){ return Array.isArray(q.correctIndices) ? q.correctIndices : [q.correctIndex]; }
+function sameSet(a,b){ if(a.length!==b.length) return false; const sa=[...a].sort(), sb=[...b].sort(); return sa.every((v,i)=>v===sb[i]); }
 
 /* ---------------- Dashboard ---------------- */
 function renderDashboard(){
@@ -233,24 +293,26 @@ function renderBank(){
   <div class="card"><h2>Add a question</h2>
     <label>Question</label><textarea id="qf-text" placeholder="e.g. Which of the following is a current asset?"></textarea>
     <label>Topic (optional)</label><input type="text" id="qf-topic" placeholder="e.g. Financial Accounting">
-    <label>Options (at least 2 needed, up to 4 — click the circle next to the correct one)</label>
-    ${[0,1,2,3].map(i=>`<div class="opt-row"><input type="radio" name="qf-correct" value="${i}" title="Mark as correct answer" ${i===0?'checked':''}><input type="text" id="qf-opt${i}" placeholder="Option ${i+1}${i>=2?' (optional)':''}"></div>`).join('')}
-    <p class="note">The filled circle marks the correct answer — click the circle next to whichever option is correct before submitting.</p>
+    <label>Options (at least 2 needed, up to 4 — tick the box next to every correct answer)</label>
+    ${[0,1,2,3].map(i=>`<div class="opt-row"><input type="checkbox" class="qf-correct" value="${i}" title="Mark as correct answer" ${i===0?'checked':''}><input type="text" id="qf-opt${i}" placeholder="Option ${i+1}${i>=2?' (optional)':''}"></div>`).join('')}
+    <p class="note">Tick every box that is a correct answer for this question — most questions have just one, but you can tick more than one if several options are correct.</p>
     <label>Explanation (optional)</label><textarea id="qf-expl"></textarea>
     <button class="btn gold" id="qf-submit" onclick="submitQuestion()">Add to shared bank</button>
   </div>
   <div class="card"><h2>Shared question bank (${state.questions.length})</h2>
-    ${state.questions.length? state.questions.map(q=>`
+    ${state.questions.length? state.questions.map(q=>{
+      const correctSet=getCorrectIndices(q);
+      return `
       <div class="qitem">
         <div style="display:flex;justify-content:space-between;gap:10px">
           <div>
             <div class="qtext">${esc(q.question)}</div>
-            <div class="qopts">${q.options.map((o,i)=>`${i===q.correctIndex?'&#10003; ':'- '}${esc(o)}`).join(' &nbsp;|&nbsp; ')}</div>
+            <div class="qopts">${q.options.map((o,i)=>`${correctSet.includes(i)?'&#10003; ':'- '}${esc(o)}`).join(' &nbsp;|&nbsp; ')}</div>
             <div class="qmeta"><span class="tag">${esc(q.topic||'General')}</span>added by ${esc(q.createdByName||'someone')}</div>
           </div>
           ${q.createdBy===currentUser.uid? `<button class="del-btn" onclick="removeQuestion('${q.id}')">Delete</button>`:''}
         </div>
-      </div>`).join('') : '<div class="empty">No questions yet.</div>'}
+      </div>`;}).join('') : '<div class="empty">No questions yet.</div>'}
   </div>`;
 }
 
@@ -259,20 +321,21 @@ window.submitQuestion = async () => {
   const topic=document.getElementById('qf-topic').value.trim();
   const expl=document.getElementById('qf-expl').value.trim();
   const rawOpts=[0,1,2,3].map(i=>document.getElementById('qf-opt'+i).value.trim());
-  const rawCorrect=parseInt(document.querySelector('input[name=qf-correct]:checked').value,10);
+  const rawCorrect=Array.from(document.querySelectorAll('.qf-correct:checked')).map(el=>parseInt(el.value,10));
   if(!text){alert('Enter a question');return;}
 
   const filledIndices = rawOpts.map((o,i)=>o?i:-1).filter(i=>i!==-1);
   if(filledIndices.length<2){ alert('Fill in at least 2 options'); return; }
-  if(!rawOpts[rawCorrect]){ alert('The correct-answer circle is next to an empty option — pick the circle next to an option you actually filled in'); return; }
+  if(rawCorrect.length===0){ alert('Tick at least one correct answer'); return; }
+  if(rawCorrect.some(i=>!rawOpts[i])){ alert('A correct-answer box is ticked next to an empty option — only tick boxes next to options you filled in'); return; }
 
   const options = filledIndices.map(i=>rawOpts[i]);
-  const correctIndex = filledIndices.indexOf(rawCorrect);
+  const correctIndices = rawCorrect.map(i=>filledIndices.indexOf(i)).sort((a,b)=>a-b);
 
   document.getElementById('qf-submit').disabled=true;
   try{
     await addDoc(collection(db,'questions'), {
-      question:text, options, correctIndex, topic:topic||'General', explanation:expl,
+      question:text, options, correctIndices, topic:topic||'General', explanation:expl,
       source:'manual', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email, createdAt:serverTimestamp()
     });
     setTab('bank');
@@ -326,7 +389,7 @@ function renderPdf(){
   </div>
   <div id="pdf-preview"></div>`;
   if(state.genLoading) document.getElementById('pdf-status').innerHTML=`<div class="loading"><div class="spinner"></div>Reading the PDF and writing questions...</div>`;
-  if(state.genError) document.getElementById('pdf-status').innerHTML=`<div class="loading" style="color:var(--red)">${esc(state.genError)}</div>`;
+  if(state.genError) document.getElementById('pdf-status').innerHTML=`<div class="loading" style="color:var(--seal)">${esc(state.genError)}</div>`;
   if(state.genPreview.length) renderGenPreview();
 }
 window.saveApiKey = saveApiKey;
@@ -339,7 +402,7 @@ function renderGenPreview(){
     ${state.genPreview.map((q,i)=>`
       <div class="gen-item"><label>
         <input type="checkbox" ${q.selected?'checked':''} onchange="state.genPreview[${i}].selected=this.checked">
-        <span><strong>${esc(q.question)}</strong><br><span style="color:var(--muted)">${q.options.map((o,oi)=>`${oi===q.correctIndex?'&#10003;':'-'} ${esc(o)}`).join(' &nbsp; ')}</span></span>
+        <span><strong>${esc(q.question)}</strong><br><span style="color:var(--muted)">${q.options.map((o,oi)=>`${(q.correctIndices||[]).includes(oi)?'&#10003;':'-'} ${esc(o)}`).join(' &nbsp; ')}</span></span>
       </label></div>`).join('')}
     <div class="btn-row">
       <button class="btn gold" onclick="commitPreview()">Add selected to bank</button>
@@ -353,7 +416,7 @@ window.commitPreview = async () => {
   const chosen = state.genPreview.filter(q=>q.selected);
   for (const q of chosen){
     await addDoc(collection(db,'questions'), {
-      question:q.question, options:q.options, correctIndex:q.correctIndex, explanation:q.explanation||'',
+      question:q.question, options:q.options, correctIndices:q.correctIndices, explanation:q.explanation||'',
       topic: topic||'From PDF', source:'pdf', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email,
       createdAt: serverTimestamp()
     });
@@ -383,9 +446,11 @@ window.generateFromPdf = async () => {
 
     const prompt = 'You are an item writer for CA (Chartered Accountancy) exam preparation. ' +
       'From the attached PDF, write exactly ' + count + ' multiple-choice questions (MCQs) in English. ' +
-      'Each question has exactly 4 options and one correct answer. ' +
+      'Each question has exactly 4 options. Most questions should have exactly one correct answer, ' +
+      'but if a question genuinely has more than one correct option, include all of them. ' +
       'Respond with ONLY valid JSON in this exact format, no preamble, no markdown fences: ' +
-      '[{"question":"...","options":["...","...","...","..."],"correctIndex":0,"explanation":"..."}] ' +
+      '[{"question":"...","options":["...","...","...","..."],"correctIndices":[0],"explanation":"..."}] ' +
+      '"correctIndices" is always an array (e.g. [0] for a single answer, [0,2] if both are correct). ' +
       'Keep each explanation under 20 words.';
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -422,7 +487,7 @@ window.generateFromPdf = async () => {
     }
 
     state.genPreview = parsed
-      .filter(q=>q.question && Array.isArray(q.options) && q.options.length===4 && typeof q.correctIndex==='number')
+      .filter(q=>q.question && Array.isArray(q.options) && q.options.length===4 && Array.isArray(q.correctIndices) && q.correctIndices.length>0)
       .map(q=>Object.assign({selected:true}, q));
     if(state.genPreview.length===0) state.genError='No valid questions were generated. Try again.';
   }catch(err){
@@ -457,7 +522,7 @@ window.startExam = () => {
   let pool = topic==='__all__'? state.questions.slice() : state.questions.filter(q=>(q.topic||'General')===topic);
   pool = shuffle(pool); count=Math.min(count,pool.length); pool=pool.slice(0,count);
   if(pool.length===0){alert('No questions in this topic');return;}
-  state.examSession = { questions:pool, topic: topic==='__all__'?'All topics':topic, index:0, answers:[], selected:null, revealed:false, timeLimit, timeLeft:timeLimit, timerId:null };
+  state.examSession = { questions:pool, topic: topic==='__all__'?'All topics':topic, index:0, answers:[], selected:[], revealed:false, timeLimit, timeLeft:timeLimit, timerId:null };
   renderExamRun(); startTimer();
 };
 
@@ -469,48 +534,59 @@ function startTimer(){
   s.timerId=setInterval(()=>{
     if(!state.examSession) return;
     state.examSession.timeLeft-=1;
-    if(state.examSession.timeLeft<=0){clearInterval(state.examSession.timerId); window.selectOption(null,true);}
+    if(state.examSession.timeLeft<=0){clearInterval(state.examSession.timerId); window.revealAnswer();}
     else{const el=document.getElementById('exam-timer'); if(el) el.textContent=state.examSession.timeLeft+'s';}
   },1000);
 }
 
 function renderExamRun(){
   const s=state.examSession, q=s.questions[s.index], pct=Math.round((s.index/s.questions.length)*100);
+  const correctSet=getCorrectIndices(q);
+  const multi = correctSet.length>1;
   document.getElementById('mainView').innerHTML = `
   <div class="card">
     ${s.timeLimit?`<span class="timer" id="exam-timer">${s.timeLeft}s</span>`:''}
-    <div class="note">Question ${s.index+1} / ${s.questions.length}</div>
+    <div class="note">Question ${s.index+1} / ${s.questions.length}${multi?' — select all that apply':''}</div>
     <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
     <div class="exam-q">${esc(q.question)}</div>
     ${q.options.map((opt,i)=>{
       let cls='exam-opt';
-      if(s.revealed){ if(i===q.correctIndex) cls+=' correct'; else if(i===s.selected) cls+=' wrong'; }
-      else if(i===s.selected) cls+=' selected';
-      return `<button class="${cls}" ${s.revealed?'disabled':''} onclick="selectOption(${i})">${esc(opt)}</button>`;
+      if(s.revealed){ if(correctSet.includes(i)) cls+=' correct'; else if(s.selected.includes(i)) cls+=' wrong'; }
+      else if(s.selected.includes(i)) cls+=' selected';
+      return `<button class="${cls}" ${s.revealed?'disabled':''} onclick="toggleOption(${i})">${esc(opt)}</button>`;
     }).join('')}
     ${s.revealed && q.explanation?`<p class="note"><strong>Explanation:</strong> ${esc(q.explanation)}</p>`:''}
     <div class="btn-row">
-      ${!s.revealed? `<button class="btn gold" onclick="revealAnswer()" ${s.selected===null?'disabled':''}>Submit answer</button>`
+      ${!s.revealed? `<button class="btn gold" onclick="revealAnswer()" ${s.selected.length===0?'disabled':''}>Submit answer</button>`
         : `<button class="btn gold" onclick="nextQuestion()">${s.index+1<s.questions.length?'Next question':'See results'}</button>`}
       <button class="btn outline" onclick="quitExam()">Quit</button>
     </div>
   </div>`;
 }
 
-window.selectOption = (i, auto) => {
+window.toggleOption = (i) => {
   const s=state.examSession; if(!s||s.revealed) return;
-  s.selected=i; if(auto) window.revealAnswer(); else renderExamRun();
+  const q=s.questions[s.index];
+  const multi = getCorrectIndices(q).length>1;
+  if(multi){
+    const pos=s.selected.indexOf(i);
+    if(pos===-1) s.selected.push(i); else s.selected.splice(pos,1);
+  } else {
+    s.selected=[i];
+  }
+  renderExamRun();
 };
 window.revealAnswer = () => {
   const s=state.examSession; clearInterval(s.timerId);
   const q=s.questions[s.index]; s.revealed=true;
-  s.answers.push({selected:s.selected, correct:s.selected===q.correctIndex});
+  const correctSet=getCorrectIndices(q);
+  s.answers.push({selected:s.selected.slice(), correct: sameSet(s.selected, correctSet)});
   renderExamRun();
 };
 window.nextQuestion = () => {
   const s=state.examSession;
   if(s.index+1>=s.questions.length){ finishExam(); return; }
-  s.index+=1; s.selected=null; s.revealed=false; s.timeLeft=s.timeLimit;
+  s.index+=1; s.selected=[]; s.revealed=false; s.timeLeft=s.timeLimit;
   renderExamRun(); startTimer();
 };
 window.quitExam = () => {
@@ -535,8 +611,8 @@ async function finishExam(){
 function renderExamResult(){
   const r=state.examResult;
   document.getElementById('mainView').innerHTML = `
-  <div class="card" style="text-align:center">
-    <div style="font-size:36px;font-weight:700;font-family:'Noto Serif',serif">${r.correctCount} / ${r.total}</div>
+  <div class="card result-score">
+    <div class="big">${r.correctCount} / ${r.total}</div>
     <div class="note">Score: ${r.percent}%</div>
     <div class="btn-row" style="justify-content:center">
       <button class="btn gold" onclick="state.examResult=null;setTab('exam');">Take another exam</button>
@@ -546,9 +622,10 @@ function renderExamResult(){
   <div class="card"><h2>Review</h2>
     ${r.questions.map((q,i)=>{
       const a=r.answers[i];
+      const correctSet=getCorrectIndices(q);
       return `<div class="qitem"><div class="qtext">${i+1}. ${esc(q.question)}</div>
         <div class="qopts">${q.options.map((o,oi)=>{
-          let mark=''; if(oi===q.correctIndex) mark=' &#10003;'; else if(oi===a.selected) mark=' &#10007;';
+          let mark=''; if(correctSet.includes(oi)) mark=' &#10003;'; else if(a.selected.includes(oi)) mark=' &#10007;';
           return `${esc(o)}${mark}`;
         }).join(' &nbsp;|&nbsp; ')}</div>
         ${q.explanation?`<div class="note">${esc(q.explanation)}</div>`:''}
@@ -563,7 +640,7 @@ function renderResults(){
   <div class="card"><h2>Your exam history</h2>
     ${state.results.length? state.results.map(r=>`
       <div class="hist-row"><span>${esc(r.topic)} — ${r.score}/${r.total}</span>
-        <strong style="color:${r.percent>=60?'var(--green)':'var(--red)'}">${r.percent}%</strong></div>`).join('')
+        <strong class="hist-score" style="color:${r.percent>=60?'var(--approve)':'var(--seal)'}">${r.percent}%</strong></div>`).join('')
       : '<div class="empty">No exams taken yet.</div>'}
   </div>`;
 }
