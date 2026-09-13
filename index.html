@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CA Exam Prep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16233A; --ink-soft:#2B3B54; --paper:#F6F1E4; --paper-alt:#EFE7D3; --paper-line:#DDD3B8;
+    --gold:#B8912F; --gold-soft:#E7D6A0; --green:#2F6B4F; --green-bg:#E1EEE4; --red:#A63A2E; --red-bg:#F5E2DE; --muted:#6B6456;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;
+    background-image:linear-gradient(var(--paper-line) 1px, transparent 1px); background-size:100% 34px;}
+  h1,h2,.serif{font-family:'Noto Serif',serif;}
+  .app{max-width:920px;margin:0 auto;padding:0 0 60px;}
+  .cover{background:var(--ink);color:var(--paper);padding:22px 24px;position:relative;border-bottom:6px solid var(--gold);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .cover h1{margin:0;font-size:24px;}
+  .cover p{margin:4px 0 0;color:var(--gold-soft);font-size:13px;}
+  .userbox{display:flex;align-items:center;gap:10px;}
+  .userbox img{width:34px;height:34px;border-radius:50%;border:2px solid var(--gold-soft);}
+  .userbox span{font-size:13px;color:var(--paper-alt);}
+  nav{display:flex;flex-wrap:wrap;background:var(--paper-alt);border-bottom:1px solid var(--paper-line);position:sticky;top:0;z-index:5;}
+  nav button{flex:1 1 auto;min-width:110px;background:transparent;border:none;border-right:1px solid var(--paper-line);
+    padding:12px 8px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;}
+  nav button:last-child{border-right:none;}
+  nav button.active{background:var(--ink);color:var(--paper);}
+  main{padding:22px 20px;}
+  .card{background:#FFFDF7;border:1px solid var(--paper-line);border-radius:6px;padding:18px;margin-bottom:16px;}
+  .card h2{font-size:17px;margin:0 0 12px;}
+  label{display:block;font-size:13.5px;font-weight:600;margin:12px 0 5px;color:var(--ink-soft);}
+  input[type=text],input[type=number],textarea,select{width:100%;padding:9px 10px;border:1px solid var(--paper-line);
+    border-radius:4px;font-size:14.5px;font-family:'Inter',sans-serif;}
+  textarea{resize:vertical;min-height:60px;}
+  input[type=file]{width:100%;padding:9px 10px;border:1px dashed var(--gold);border-radius:4px;background:var(--gold-soft);}
+  .opt-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  .opt-row input[type=text]{flex:1;}
+  .btn{display:inline-block;padding:10px 18px;background:var(--ink);color:var(--paper);border:none;border-radius:4px;
+    font-weight:600;font-size:14.5px;cursor:pointer;margin-top:14px;}
+  .btn.gold{background:var(--gold);color:var(--ink);}
+  .btn.outline{background:transparent;border:1px solid var(--ink);color:var(--ink);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .qitem{border-bottom:1px dashed var(--paper-line);padding:12px 0;}
+  .qitem:last-child{border-bottom:none;}
+  .qtext{font-weight:600;font-size:14.5px;}
+  .qopts{font-size:13px;color:var(--muted);margin-top:6px;}
+  .qmeta{font-size:11.5px;color:var(--gold);margin-top:4px;font-weight:600;}
+  .tag{display:inline-block;background:var(--gold-soft);color:#5c471a;font-size:11px;padding:2px 8px;border-radius:10px;margin-right:6px;font-weight:600;}
+  .del-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:600;}
+  .empty{text-align:center;padding:30px 10px;color:var(--muted);}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}
+  .stat{background:var(--ink);color:var(--paper);border-radius:6px;padding:14px;text-align:center;}
+  .stat .num{font-size:26px;font-weight:700;font-family:'Noto Serif',serif;color:var(--gold-soft);}
+  .stat .lbl{font-size:12.5px;margin-top:4px;color:var(--paper-alt);}
+  .progress-wrap{background:var(--paper-alt);border-radius:6px;height:8px;overflow:hidden;margin-bottom:16px;}
+  .progress-bar{background:var(--gold);height:100%;transition:width .3s;}
+  .timer{display:inline-flex;background:var(--ink);color:var(--gold-soft);padding:4px 12px;border-radius:14px;font-weight:600;font-size:13px;float:right;}
+  .exam-q{font-size:17px;font-weight:700;margin:10px 0 16px;font-family:'Noto Serif',serif;}
+  .exam-opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--paper-line);border-radius:5px;
+    padding:11px 14px;margin-bottom:10px;font-size:14.5px;cursor:pointer;}
+  .exam-opt.selected{border-color:var(--ink);background:var(--paper-alt);}
+  .exam-opt.correct{border-color:var(--green);background:var(--green-bg);}
+  .exam-opt.wrong{border-color:var(--red);background:var(--red-bg);}
+  .hist-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--paper-line);font-size:13.5px;}
+  .loading{display:flex;align-items:center;gap:10px;color:var(--muted);margin-top:12px;}
+  .spinner{width:16px;height:16px;border:2px solid var(--paper-line);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .gen-item{border:1px solid var(--paper-line);border-radius:5px;padding:10px 12px;margin-bottom:8px;background:#fff;}
+  .gen-item label{display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:0;font-size:13.5px;}
+  .note{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5;}
+  .login-wrap{display:flex;align-items:center;justify-content:center;min-height:70vh;padding:20px;}
+  .login-card{background:#FFFDF7;border:1px solid var(--paper-line);border-radius:8px;padding:36px 30px;max-width:380px;text-align:center;}
+  .login-card h2{margin-top:0;}
+  .google-btn{display:inline-flex;align-items:center;gap:10px;background:#fff;border:1px solid #ccc;border-radius:6px;
+    padding:10px 20px;font-weight:600;cursor:pointer;font-size:14.5px;margin-top:16px;}
+  .config-warning{background:var(--red-bg);border:1px solid var(--red);color:var(--red);padding:14px;border-radius:6px;margin:16px;font-size:13.5px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="cover">
+    <div>
+      <h1>CA Exam Prep</h1>
+      <p>Shared question bank, your own private scores</p>
+    </div>
+    <div class="userbox" id="userbox" style="display:none">
+      <img id="userphoto" src="" alt="">
+      <span id="username"></span>
+      <button class="btn outline" style="margin:0;padding:6px 12px;font-size:12.5px" onclick="signOutUser()">Sign out</button>
+    </div>
+  </div>
+  <div id="configWarning"></div>
+  <div id="loginScreen" style="display:none">
+    <div class="login-wrap">
+      <div class="login-card">
+        <h2>Sign in to continue</h2>
+        <p class="note">Sign in with Google to access the shared question bank and your personal exam history.</p>
+        <button class="google-btn" onclick="signInWithGoogle()">Sign in with Google</button>
+      </div>
+    </div>
+  </div>
+  <div id="appScreen" style="display:none">
+    <nav id="navBar"></nav>
+    <main id="mainView"></main>
+  </div>
+</div>
+
+<script type="module">
+/* =========================================================
+   1) REPLACE THIS with your own Firebase project config
+      (Firebase console > Project settings > General > Your apps > Web app)
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDW7iPzMKtxQk5Om2k7iAjtxZIYzcgnNg4",
+  authDomain: "ca-exam-prep.firebaseapp.com",
+  projectId: "ca-exam-prep",
+  storageBucket: "ca-exam-prep.firebasestorage.app",
+  messagingSenderId: "262854448835",
+  appId: "1:262854448835:web:b579f71156bbdd43687476"
+};
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, where, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+let app, auth, db, currentUser = null;
+
+const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+if (!isConfigured) {
+  document.getElementById('configWarning').innerHTML =
+    `<div class="config-warning">Firebase is not configured yet. Open this file and replace the <code>firebaseConfig</code> placeholder near the top with your own project's config (see SETUP_GUIDE_BN.md).</div>`;
+} else {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    if (user) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = 'block';
+      document.getElementById('userbox').style.display = 'flex';
+      document.getElementById('userphoto').src = user.photoURL || '';
+      document.getElementById('username').textContent = user.displayName || user.email;
+      loadForTab(state.tab);
+    } else {
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('appScreen').style.display = 'none';
+      document.getElementById('userbox').style.display = 'none';
+    }
+  });
+}
+
+window.signInWithGoogle = async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch (e) { alert('Sign-in failed: ' + e.message); }
+};
+window.signOutUser = () => signOut(auth);
+
+/* ---------------- App state & tabs ---------------- */
+const TABS = [
+  { id:'dashboard', label:'Home' }, { id:'bank', label:'Bank' }, { id:'pdf', label:'From PDF' },
+  { id:'exam', label:'Exam' }, { id:'results', label:'Results' }
+];
+let state = { tab:'dashboard', questions:[], results:[], genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
+
+window.setTab = (id) => { state.tab = id; state.genError=''; state.genPreview=[]; loadForTab(id); };
+
+function renderNav(){
+  const nav = document.getElementById('navBar'); nav.innerHTML = '';
+  TABS.forEach(t=>{
+    const b = document.createElement('button');
+    b.textContent = t.label; if (t.id===state.tab) b.classList.add('active');
+    b.onclick = () => setTab(t.id); nav.appendChild(b);
+  });
+}
+
+async function fetchQuestions(){
+  const snap = await getDocs(query(collection(db,'questions'), orderBy('createdAt','desc')));
+  return snap.docs.map(d=>({id:d.id, ...d.data()}));
+}
+async function fetchResults(){
+  const snap = await getDocs(query(collection(db,'results'), where('uid','==',currentUser.uid), orderBy('createdAt','desc')));
+  return snap.docs.map(d=>({id:d.id, ...d.data()}));
+}
+
+async function loadForTab(id){
+  renderNav();
+  if (!currentUser) return;
+  if (id==='dashboard'){ state.questions=await fetchQuestions(); state.results=await fetchResults(); renderDashboard(); }
+  else if (id==='bank'){ state.questions=await fetchQuestions(); renderBank(); }
+  else if (id==='pdf'){ renderPdf(); }
+  else if (id==='exam'){ if(state.examSession){renderExamRun();return;} if(state.examResult){renderExamResult();return;} state.questions=await fetchQuestions(); renderExamSetup(); }
+  else if (id==='results'){ state.results=await fetchResults(); renderResults(); }
+}
+
+function topicsOf(list){ const s=new Set(); list.forEach(q=>s.add(q.topic||'General')); return Array.from(s); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- Dashboard ---------------- */
+function renderDashboard(){
+  const total=state.questions.length, examsN=state.results.length;
+  const avg = examsN? Math.round(state.results.reduce((s,r)=>s+r.percent,0)/examsN):0;
+  document.getElementById('mainView').innerHTML = `
+  <div class="card"><h2>At a glance</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="num">${total}</div><div class="lbl">Questions in shared bank</div></div>
+      <div class="stat"><div class="num">${examsN}</div><div class="lbl">Your exams taken</div></div>
+      <div class="stat"><div class="num">${avg}%</div><div class="lbl">Your average score</div></div>
+      <div class="stat"><div class="num">${topicsOf(state.questions).length}</div><div class="lbl">Topics</div></div>
+    </div>
+  </div>
+  <div class="card"><h2>Get started</h2>
+    <div class="btn-row">
+      <button class="btn gold" onclick="setTab('bank')">Add question</button>
+      <button class="btn gold" onclick="setTab('pdf')">Generate from PDF</button>
+      <button class="btn" onclick="setTab('exam')" ${total===0?'disabled':''}>Start exam</button>
+    </div>
+  </div>`;
+}
+
+/* ---------------- Question bank ---------------- */
+function renderBank(){
+  document.getElementById('mainView').innerHTML = `
+  <div class="card"><h2>Add a question</h2>
+    <label>Question</label><textarea id="qf-text" placeholder="e.g. Which of the following is a current asset?"></textarea>
+    <label>Topic (optional)</label><input type="text" id="qf-topic" placeholder="e.g. Financial Accounting">
+    <label>Options</label>
+    ${[0,1,2,3].map(i=>`<div class="opt-row"><input type="radio" name="qf-correct" value="${i}" ${i===0?'checked':''}><input type="text" id="qf-opt${i}" placeholder="Option ${i+1}"></div>`).join('')}
+    <label>Explanation (optional)</label><textarea id="qf-expl"></textarea>
+    <button class="btn gold" id="qf-submit" onclick="submitQuestion()">Add to shared bank</button>
+  </div>
+  <div class="card"><h2>Shared question bank (${state.questions.length})</h2>
+    ${state.questions.length? state.questions.map(q=>`
+      <div class="qitem">
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <div>
+            <div class="qtext">${esc(q.question)}</div>
+            <div class="qopts">${q.options.map((o,i)=>`${i===q.correctIndex?'&#10003; ':'- '}${esc(o)}`).join(' &nbsp;|&nbsp; ')}</div>
+            <div class="qmeta"><span class="tag">${esc(q.topic||'General')}</span>added by ${esc(q.createdByName||'someone')}</div>
+          </div>
+          ${q.createdBy===currentUser.uid? `<button class="del-btn" onclick="removeQuestion('${q.id}')">Delete</button>`:''}
+        </div>
+      </div>`).join('') : '<div class="empty">No questions yet.</div>'}
+  </div>`;
+}
+
+window.submitQuestion = async () => {
+  const text=document.getElementById('qf-text').value.trim();
+  const topic=document.getElementById('qf-topic').value.trim();
+  const expl=document.getElementById('qf-expl').value.trim();
+  const opts=[0,1,2,3].map(i=>document.getElementById('qf-opt'+i).value.trim());
+  const correct=parseInt(document.querySelector('input[name=qf-correct]:checked').value,10);
+  if(!text){alert('Enter a question');return;}
+  if(opts.some(o=>!o)){alert('Fill in all four options');return;}
+  document.getElementById('qf-submit').disabled=true;
+  try{
+    await addDoc(collection(db,'questions'), {
+      question:text, options:opts, correctIndex:correct, topic:topic||'General', explanation:expl,
+      source:'manual', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email, createdAt:serverTimestamp()
+    });
+    setTab('bank');
+  }catch(e){ alert('Could not save: '+e.message); document.getElementById('qf-submit').disabled=false; }
+};
+
+window.removeQuestion = async (id) => {
+  try{ await deleteDoc(doc(db,'questions',id)); setTab('bank'); }
+  catch(e){ alert('Could not delete: '+e.message); }
+};
+
+/* ---------------- PDF generation ---------------- */
+/* No server / Cloud Function needed. Each signed-in user pastes their own
+   Anthropic API key once; it is stored only in their own browser
+   (localStorage) and used only to call Anthropic directly from their device. */
+function getSavedApiKey(){ return localStorage.getItem('anthropic_api_key') || ''; }
+function saveApiKey(){
+  const val = document.getElementById('api-key-input').value.trim();
+  if(!val){ alert('Paste your API key first'); return; }
+  localStorage.setItem('anthropic_api_key', val);
+  renderPdf();
+}
+function clearApiKey(){
+  if(!confirm('Remove the saved API key from this browser?')) return;
+  localStorage.removeItem('anthropic_api_key');
+  renderPdf();
+}
+
+function renderPdf(){
+  const key = getSavedApiKey();
+  document.getElementById('mainView').innerHTML = `
+  <div class="card"><h2>Your Anthropic API key</h2>
+    ${key ? `
+      <p class="note">A key is saved in this browser (ending in ...${esc(key.slice(-4))}). It's only used from your own device to generate questions — nobody else can see it.</p>
+      <button class="btn outline" onclick="clearApiKey()">Remove saved key</button>
+    ` : `
+      <p class="note">To generate questions from a PDF, paste your own free Anthropic API key (get one at console.anthropic.com). It's saved only in this browser, never shared with anyone else using this site.</p>
+      <label>API key</label>
+      <input type="text" id="api-key-input" placeholder="sk-ant-...">
+      <button class="btn gold" onclick="saveApiKey()">Save key</button>
+    `}
+  </div>
+  <div class="card"><h2>Generate from PDF</h2>
+    <p class="note">Upload a PDF of notes or a textbook to auto-generate MCQs.</p>
+    <label>PDF file</label><input type="file" id="pdf-file" accept="application/pdf">
+    <label>How many questions</label><input type="number" id="pdf-count" value="8" min="3" max="12">
+    <label>Topic name (optional)</label><input type="text" id="pdf-topic" placeholder="e.g. Taxation">
+    <button class="btn gold" id="pdf-btn" onclick="generateFromPdf()" ${key?'':'disabled'}>Generate questions</button>
+    ${key?'':'<p class="note">Save an API key above first.</p>'}
+    <div id="pdf-status"></div>
+  </div>
+  <div id="pdf-preview"></div>`;
+  if(state.genLoading) document.getElementById('pdf-status').innerHTML=`<div class="loading"><div class="spinner"></div>Reading the PDF and writing questions...</div>`;
+  if(state.genError) document.getElementById('pdf-status').innerHTML=`<div class="loading" style="color:var(--red)">${esc(state.genError)}</div>`;
+  if(state.genPreview.length) renderGenPreview();
+}
+window.saveApiKey = saveApiKey;
+window.clearApiKey = clearApiKey;
+
+function renderGenPreview(){
+  document.getElementById('pdf-preview').innerHTML = `
+  <div class="card"><h2>Generated questions (${state.genPreview.length})</h2>
+    <p class="note">Uncheck any you don't want, then add the rest to the shared bank.</p>
+    ${state.genPreview.map((q,i)=>`
+      <div class="gen-item"><label>
+        <input type="checkbox" ${q.selected?'checked':''} onchange="state.genPreview[${i}].selected=this.checked">
+        <span><strong>${esc(q.question)}</strong><br><span style="color:var(--muted)">${q.options.map((o,oi)=>`${oi===q.correctIndex?'&#10003;':'-'} ${esc(o)}`).join(' &nbsp; ')}</span></span>
+      </label></div>`).join('')}
+    <div class="btn-row">
+      <button class="btn gold" onclick="commitPreview()">Add selected to bank</button>
+      <button class="btn outline" onclick="state.genPreview=[];renderPdf();">Cancel</button>
+    </div>
+  </div>`;
+}
+
+window.commitPreview = async () => {
+  const topic = document.getElementById('pdf-topic') ? document.getElementById('pdf-topic').value.trim() : '';
+  const chosen = state.genPreview.filter(q=>q.selected);
+  for (const q of chosen){
+    await addDoc(collection(db,'questions'), {
+      question:q.question, options:q.options, correctIndex:q.correctIndex, explanation:q.explanation||'',
+      topic: topic||'From PDF', source:'pdf', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email,
+      createdAt: serverTimestamp()
+    });
+  }
+  state.genPreview=[]; setTab('bank');
+};
+
+window.generateFromPdf = async () => {
+  const apiKey = getSavedApiKey();
+  if(!apiKey){ alert('Save your API key first'); return; }
+  const fileInput=document.getElementById('pdf-file');
+  const count=Math.min(12,Math.max(3,parseInt(document.getElementById('pdf-count').value,10)||8));
+  const topic=document.getElementById('pdf-topic').value.trim();
+  if(!fileInput.files.length){alert('Choose a PDF file');return;}
+  const file=fileInput.files[0];
+  if(file.type!=='application/pdf'){alert('Please upload a PDF file');return;}
+
+  state.genLoading=true; state.genError=''; state.genPreview=[]; renderPdf();
+
+  try{
+    const base64Data = await new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=()=>resolve(r.result.split(',')[1]);
+      r.onerror=()=>reject(new Error('Could not read file'));
+      r.readAsDataURL(file);
+    });
+
+    const prompt = 'You are an item writer for CA (Chartered Accountancy) exam preparation. ' +
+      'From the attached PDF, write exactly ' + count + ' multiple-choice questions (MCQs) in English. ' +
+      'Each question has exactly 4 options and one correct answer. ' +
+      'Respond with ONLY valid JSON in this exact format, no preamble, no markdown fences: ' +
+      '[{"question":"...","options":["...","...","...","..."],"correctIndex":0,"explanation":"..."}] ' +
+      'Keep each explanation under 20 words.';
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-5',
+        max_tokens:3000,
+        messages:[{
+          role:'user',
+          content:[
+            { type:'document', source:{ type:'base64', media_type:'application/pdf', data: base64Data } },
+            { type:'text', text: prompt }
+          ]
+        }]
+      })
+    });
+    const data = await resp.json();
+    if(!resp.ok || data.error) throw new Error((data.error && data.error.message) || 'API request failed');
+
+    const text = (data.content||[]).map(c=>c.text||'').join('\n');
+    const clean = text.replace(/```json/gi,'').replace(/```/g,'').trim();
+    let parsed;
+    try{ parsed = JSON.parse(clean); }
+    catch(e){
+      const match = clean.match(/\[[\s\S]*\]/);
+      if(match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not read the generated questions. Try again.');
+    }
+
+    state.genPreview = parsed
+      .filter(q=>q.question && Array.isArray(q.options) && q.options.length===4 && typeof q.correctIndex==='number')
+      .map(q=>Object.assign({selected:true}, q));
+    if(state.genPreview.length===0) state.genError='No valid questions were generated. Try again.';
+  }catch(err){
+    state.genError = err.message || 'Could not generate questions.';
+  }finally{
+    state.genLoading=false; renderPdf();
+  }
+};
+
+/* ---------------- Exam ---------------- */
+function renderExamSetup(){
+  const t=topicsOf(state.questions);
+  document.getElementById('mainView').innerHTML = `
+  <div class="card"><h2>Set up exam</h2>
+    <label>Topic</label>
+    <select id="ex-topic"><option value="__all__">All topics (${state.questions.length})</option>
+      ${t.map(topic=>{const c=state.questions.filter(q=>(q.topic||'General')===topic).length;
+        return `<option value="${esc(topic)}">${esc(topic)} (${c})</option>`;}).join('')}
+    </select>
+    <label>Number of questions</label><input type="number" id="ex-count" value="10" min="1">
+    <label>Time per question</label>
+    <select id="ex-time"><option value="0">No limit</option><option value="30">30s</option>
+      <option value="45" selected>45s</option><option value="60">60s</option><option value="90">90s</option></select>
+    <button class="btn gold" onclick="startExam()" ${state.questions.length===0?'disabled':''}>Start exam</button>
+  </div>`;
+}
+
+window.startExam = () => {
+  const topic=document.getElementById('ex-topic').value;
+  let count=parseInt(document.getElementById('ex-count').value,10)||10;
+  const timeLimit=parseInt(document.getElementById('ex-time').value,10);
+  let pool = topic==='__all__'? state.questions.slice() : state.questions.filter(q=>(q.topic||'General')===topic);
+  pool = shuffle(pool); count=Math.min(count,pool.length); pool=pool.slice(0,count);
+  if(pool.length===0){alert('No questions in this topic');return;}
+  state.examSession = { questions:pool, topic: topic==='__all__'?'All topics':topic, index:0, answers:[], selected:null, revealed:false, timeLimit, timeLeft:timeLimit, timerId:null };
+  renderExamRun(); startTimer();
+};
+
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function startTimer(){
+  const s=state.examSession; if(!s||!s.timeLimit||s.revealed) return;
+  clearInterval(s.timerId);
+  s.timerId=setInterval(()=>{
+    if(!state.examSession) return;
+    state.examSession.timeLeft-=1;
+    if(state.examSession.timeLeft<=0){clearInterval(state.examSession.timerId); window.selectOption(null,true);}
+    else{const el=document.getElementById('exam-timer'); if(el) el.textContent=state.examSession.timeLeft+'s';}
+  },1000);
+}
+
+function renderExamRun(){
+  const s=state.examSession, q=s.questions[s.index], pct=Math.round((s.index/s.questions.length)*100);
+  document.getElementById('mainView').innerHTML = `
+  <div class="card">
+    ${s.timeLimit?`<span class="timer" id="exam-timer">${s.timeLeft}s</span>`:''}
+    <div class="note">Question ${s.index+1} / ${s.questions.length}</div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    <div class="exam-q">${esc(q.question)}</div>
+    ${q.options.map((opt,i)=>{
+      let cls='exam-opt';
+      if(s.revealed){ if(i===q.correctIndex) cls+=' correct'; else if(i===s.selected) cls+=' wrong'; }
+      else if(i===s.selected) cls+=' selected';
+      return `<button class="${cls}" ${s.revealed?'disabled':''} onclick="selectOption(${i})">${esc(opt)}</button>`;
+    }).join('')}
+    ${s.revealed && q.explanation?`<p class="note"><strong>Explanation:</strong> ${esc(q.explanation)}</p>`:''}
+    <div class="btn-row">
+      ${!s.revealed? `<button class="btn gold" onclick="revealAnswer()" ${s.selected===null?'disabled':''}>Submit answer</button>`
+        : `<button class="btn gold" onclick="nextQuestion()">${s.index+1<s.questions.length?'Next question':'See results'}</button>`}
+      <button class="btn outline" onclick="quitExam()">Quit</button>
+    </div>
+  </div>`;
+}
+
+window.selectOption = (i, auto) => {
+  const s=state.examSession; if(!s||s.revealed) return;
+  s.selected=i; if(auto) window.revealAnswer(); else renderExamRun();
+};
+window.revealAnswer = () => {
+  const s=state.examSession; clearInterval(s.timerId);
+  const q=s.questions[s.index]; s.revealed=true;
+  s.answers.push({selected:s.selected, correct:s.selected===q.correctIndex});
+  renderExamRun();
+};
+window.nextQuestion = () => {
+  const s=state.examSession;
+  if(s.index+1>=s.questions.length){ finishExam(); return; }
+  s.index+=1; s.selected=null; s.revealed=false; s.timeLeft=s.timeLimit;
+  renderExamRun(); startTimer();
+};
+window.quitExam = () => {
+  if(!confirm('Quit this exam? Progress will not be saved.')) return;
+  clearInterval(state.examSession.timerId); state.examSession=null; setTab('exam');
+};
+
+async function finishExam(){
+  const s=state.examSession;
+  const correctCount=s.answers.filter(a=>a.correct).length, total=s.questions.length;
+  const percent=Math.round((correctCount/total)*100);
+  try{
+    await addDoc(collection(db,'results'), {
+      uid:currentUser.uid, userName:currentUser.displayName||currentUser.email,
+      topic:s.topic, score:correctCount, total, percent, createdAt:serverTimestamp()
+    });
+  }catch(e){ console.error('Could not save result', e); }
+  state.examResult={ questions:s.questions, answers:s.answers, correctCount, total, percent };
+  state.examSession=null; renderExamResult();
+}
+
+function renderExamResult(){
+  const r=state.examResult;
+  document.getElementById('mainView').innerHTML = `
+  <div class="card" style="text-align:center">
+    <div style="font-size:36px;font-weight:700;font-family:'Noto Serif',serif">${r.correctCount} / ${r.total}</div>
+    <div class="note">Score: ${r.percent}%</div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn gold" onclick="state.examResult=null;setTab('exam');">Take another exam</button>
+      <button class="btn outline" onclick="state.examResult=null;setTab('results');">View results</button>
+    </div>
+  </div>
+  <div class="card"><h2>Review</h2>
+    ${r.questions.map((q,i)=>{
+      const a=r.answers[i];
+      return `<div class="qitem"><div class="qtext">${i+1}. ${esc(q.question)}</div>
+        <div class="qopts">${q.options.map((o,oi)=>{
+          let mark=''; if(oi===q.correctIndex) mark=' &#10003;'; else if(oi===a.selected) mark=' &#10007;';
+          return `${esc(o)}${mark}`;
+        }).join(' &nbsp;|&nbsp; ')}</div>
+        ${q.explanation?`<div class="note">${esc(q.explanation)}</div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------------- Results ---------------- */
+function renderResults(){
+  document.getElementById('mainView').innerHTML = `
+  <div class="card"><h2>Your exam history</h2>
+    ${state.results.length? state.results.map(r=>`
+      <div class="hist-row"><span>${esc(r.topic)} — ${r.score}/${r.total}</span>
+        <strong style="color:${r.percent>=60?'var(--green)':'var(--red)'}">${r.percent}%</strong></div>`).join('')
+      : '<div class="empty">No exams taken yet.</div>'}
+  </div>`;
+}
+</script>
+</body>
+</html>
