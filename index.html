@@ -73,6 +73,7 @@
   .qtext{font-weight:600;font-size:14.5px;}
   .qopts{font-size:13px;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace;}
   .qmeta{font-size:11.5px;color:var(--brass);margin-top:5px;font-weight:600;}
+  .qtrace{font-size:11px;color:var(--muted);margin-top:3px;}
   .tag{display:inline-block;background:var(--paper-alt);color:var(--ink-soft);border:1px solid var(--line);
     font-size:11px;padding:2px 8px;border-radius:2px;margin-right:6px;font-weight:600;}
   .del-btn{background:none;border:none;color:var(--seal);cursor:pointer;font-size:13px;font-weight:600;}
@@ -183,7 +184,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, where, orderBy, serverTimestamp
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let app, auth, db, currentUser = null;
@@ -228,9 +229,9 @@ const TABS = [
   { id:'dashboard', label:'Home' }, { id:'bank', label:'Bank' }, { id:'pdf', label:'From PDF' },
   { id:'exam', label:'Exam' }, { id:'results', label:'Results' }
 ];
-let state = { tab:'dashboard', questions:[], results:[], genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
+let state = { tab:'dashboard', questions:[], results:[], editingId:null, genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
 
-window.setTab = (id) => { state.tab = id; state.genError=''; state.genPreview=[]; loadForTab(id); };
+window.setTab = (id) => { state.tab = id; state.editingId=null; state.genError=''; state.genPreview=[]; loadForTab(id); };
 
 function renderNav(){
   const nav = document.getElementById('navBar'); nav.innerHTML = '';
@@ -264,6 +265,14 @@ function topicsOf(list){ const s=new Set(); list.forEach(q=>s.add(q.topic||'Gene
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function getCorrectIndices(q){ return Array.isArray(q.correctIndices) ? q.correctIndices : [q.correctIndex]; }
 function sameSet(a,b){ if(a.length!==b.length) return false; const sa=[...a].sort(), sb=[...b].sort(); return sa.every((v,i)=>v===sb[i]); }
+function fmtDate(ts){
+  try{
+    const d = ts && typeof ts.toDate === 'function' ? ts.toDate() : null;
+    if(!d) return '';
+    return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ', ' +
+      d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return ''; }
+}
 
 /* ---------------- Dashboard ---------------- */
 function renderDashboard(){
@@ -289,15 +298,25 @@ function renderDashboard(){
 
 /* ---------------- Question bank ---------------- */
 function renderBank(){
+  const editing = state.editingId ? state.questions.find(q=>q.id===state.editingId) : null;
+  const eCorrect = editing ? getCorrectIndices(editing) : [0];
   document.getElementById('mainView').innerHTML = `
-  <div class="card"><h2>Add a question</h2>
-    <label>Question</label><textarea id="qf-text" placeholder="e.g. Which of the following is a current asset?"></textarea>
-    <label>Topic (optional)</label><input type="text" id="qf-topic" placeholder="e.g. Financial Accounting">
+  <div class="card">
+    <h2>${editing? 'Edit question' : 'Add a question'}</h2>
+    <label>Question</label><textarea id="qf-text" placeholder="e.g. Which of the following is a current asset?">${editing?esc(editing.question):''}</textarea>
+    <label>Topic (optional)</label><input type="text" id="qf-topic" value="${editing?esc(editing.topic||''):''}" placeholder="e.g. Financial Accounting">
     <label>Options (at least 2 needed, up to 4 — tick the box next to every correct answer)</label>
-    ${[0,1,2,3].map(i=>`<div class="opt-row"><input type="checkbox" class="qf-correct" value="${i}" title="Mark as correct answer" ${i===0?'checked':''}><input type="text" id="qf-opt${i}" placeholder="Option ${i+1}${i>=2?' (optional)':''}"></div>`).join('')}
+    ${[0,1,2,3].map(i=>{
+      const val = editing ? (editing.options[i]||'') : '';
+      const checked = editing ? eCorrect.includes(i) : i===0;
+      return `<div class="opt-row"><input type="checkbox" class="qf-correct" value="${i}" title="Mark as correct answer" ${checked?'checked':''}><input type="text" id="qf-opt${i}" value="${esc(val)}" placeholder="Option ${i+1}${i>=2?' (optional)':''}"></div>`;
+    }).join('')}
     <p class="note">Tick every box that is a correct answer for this question — most questions have just one, but you can tick more than one if several options are correct.</p>
-    <label>Explanation (optional)</label><textarea id="qf-expl"></textarea>
-    <button class="btn gold" id="qf-submit" onclick="submitQuestion()">Add to shared bank</button>
+    <label>Explanation (optional)</label><textarea id="qf-expl">${editing?esc(editing.explanation||''):''}</textarea>
+    <div class="btn-row">
+      <button class="btn gold" id="qf-submit" onclick="submitQuestion()">${editing?'Save changes':'Add to shared bank'}</button>
+      ${editing? `<button class="btn outline" onclick="cancelEdit()">Cancel</button>`:''}
+    </div>
   </div>
   <div class="card"><h2>Shared question bank (${state.questions.length})</h2>
     ${state.questions.length? state.questions.map(q=>{
@@ -308,13 +327,21 @@ function renderBank(){
           <div>
             <div class="qtext">${esc(q.question)}</div>
             <div class="qopts">${q.options.map((o,i)=>`${correctSet.includes(i)?'&#10003; ':'- '}${esc(o)}`).join(' &nbsp;|&nbsp; ')}</div>
-            <div class="qmeta"><span class="tag">${esc(q.topic||'General')}</span>added by ${esc(q.createdByName||'someone')}</div>
+            <div class="qmeta"><span class="tag">${esc(q.topic||'General')}</span></div>
+            <div class="qtrace">Added by ${esc(q.createdByName||'someone')}${q.createdAt?', '+fmtDate(q.createdAt):''}</div>
+            ${q.editCount? `<div class="qtrace">Edited ${q.editCount} time${q.editCount>1?'s':''} — last by ${esc(q.lastEditedByName||'someone')}${q.lastEditedAt?', '+fmtDate(q.lastEditedAt):''}</div>` : ''}
           </div>
-          ${q.createdBy===currentUser.uid? `<button class="del-btn" onclick="removeQuestion('${q.id}')">Delete</button>`:''}
+          <div style="display:flex;gap:10px;flex-shrink:0;align-items:flex-start">
+            <button class="btn outline" style="margin:0;padding:5px 10px;font-size:12px" onclick="editQuestion('${q.id}')">Edit</button>
+            ${q.createdBy===currentUser.uid? `<button class="del-btn" onclick="removeQuestion('${q.id}')">Delete</button>`:''}
+          </div>
         </div>
       </div>`;}).join('') : '<div class="empty">No questions yet.</div>'}
   </div>`;
 }
+
+window.editQuestion = (id) => { state.editingId=id; renderBank(); window.scrollTo({top:0, behavior:'smooth'}); };
+window.cancelEdit = () => { state.editingId=null; renderBank(); };
 
 window.submitQuestion = async () => {
   const text=document.getElementById('qf-text').value.trim();
@@ -334,15 +361,29 @@ window.submitQuestion = async () => {
 
   document.getElementById('qf-submit').disabled=true;
   try{
-    await addDoc(collection(db,'questions'), {
-      question:text, options, correctIndices, topic:topic||'General', explanation:expl,
-      source:'manual', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email, createdAt:serverTimestamp()
-    });
+    if(state.editingId){
+      const existing = state.questions.find(q=>q.id===state.editingId);
+      await updateDoc(doc(db,'questions',state.editingId), {
+        question:text, options, correctIndices, topic:topic||'General', explanation:expl,
+        lastEditedBy: currentUser.uid,
+        lastEditedByName: currentUser.displayName||currentUser.email,
+        lastEditedAt: serverTimestamp(),
+        editCount: (existing && existing.editCount ? existing.editCount : 0) + 1
+      });
+      state.editingId=null;
+    } else {
+      await addDoc(collection(db,'questions'), {
+        question:text, options, correctIndices, topic:topic||'General', explanation:expl,
+        source:'manual', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email,
+        createdAt:serverTimestamp(), editCount:0
+      });
+    }
     setTab('bank');
   }catch(e){ alert('Could not save: '+e.message); document.getElementById('qf-submit').disabled=false; }
 };
 
 window.removeQuestion = async (id) => {
+  if(!confirm('Delete this question from the shared bank? This cannot be undone.')) return;
   try{ await deleteDoc(doc(db,'questions',id)); setTab('bank'); }
   catch(e){ alert('Could not delete: '+e.message); }
 };
@@ -418,7 +459,7 @@ window.commitPreview = async () => {
     await addDoc(collection(db,'questions'), {
       question:q.question, options:q.options, correctIndices:q.correctIndices, explanation:q.explanation||'',
       topic: topic||'From PDF', source:'pdf', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(), editCount: 0
     });
   }
   state.genPreview=[]; setTab('bank');
@@ -639,11 +680,22 @@ function renderResults(){
   document.getElementById('mainView').innerHTML = `
   <div class="card"><h2>Your exam history</h2>
     ${state.results.length? state.results.map(r=>`
-      <div class="hist-row"><span>${esc(r.topic)} — ${r.score}/${r.total}</span>
-        <strong class="hist-score" style="color:${r.percent>=60?'var(--approve)':'var(--seal)'}">${r.percent}%</strong></div>`).join('')
+      <div class="hist-row">
+        <span>${esc(r.topic)} — ${r.score}/${r.total}${r.createdAt?', '+fmtDate(r.createdAt):''}</span>
+        <span style="display:flex;align-items:center;gap:14px">
+          <strong class="hist-score" style="color:${r.percent>=60?'var(--approve)':'var(--seal)'}">${r.percent}%</strong>
+          <button class="del-btn" onclick="removeResult('${r.id}')">Delete</button>
+        </span>
+      </div>`).join('')
       : '<div class="empty">No exams taken yet.</div>'}
   </div>`;
 }
+
+window.removeResult = async (id) => {
+  if(!confirm('Delete this exam result? This cannot be undone.')) return;
+  try{ await deleteDoc(doc(db,'results',id)); setTab('results'); }
+  catch(e){ alert('Could not delete: '+e.message); }
+};
 </script>
 </body>
 </html>
