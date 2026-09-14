@@ -184,7 +184,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy, serverTimestamp
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let app, auth, db, currentUser = null;
@@ -247,7 +247,8 @@ async function fetchQuestions(){
   return snap.docs.map(d=>({id:d.id, ...d.data()}));
 }
 async function fetchResults(){
-  const snap = await getDocs(query(collection(db,'results'), where('uid','==',currentUser.uid), orderBy('createdAt','desc')));
+  // Results are shared: everyone signed in can see everyone's scores.
+  const snap = await getDocs(query(collection(db,'results'), orderBy('createdAt','desc')));
   return snap.docs.map(d=>({id:d.id, ...d.data()}));
 }
 
@@ -276,8 +277,10 @@ function fmtDate(ts){
 
 /* ---------------- Dashboard ---------------- */
 function renderDashboard(){
-  const total=state.questions.length, examsN=state.results.length;
-  const avg = examsN? Math.round(state.results.reduce((s,r)=>s+r.percent,0)/examsN):0;
+  const total=state.questions.length;
+  const myResults = state.results.filter(r=>r.uid===currentUser.uid);
+  const examsN=myResults.length;
+  const avg = examsN? Math.round(myResults.reduce((s,r)=>s+r.percent,0)/examsN):0;
   document.getElementById('mainView').innerHTML = `
   <div class="card"><h2>At a glance</h2>
     <div class="stat-grid">
@@ -442,15 +445,18 @@ function renderGenPreview(){
     <p class="note">Uncheck any you don't want, then add the rest to the shared bank.</p>
     ${state.genPreview.map((q,i)=>`
       <div class="gen-item"><label>
-        <input type="checkbox" ${q.selected?'checked':''} onchange="state.genPreview[${i}].selected=this.checked">
+        <input type="checkbox" ${q.selected?'checked':''} onchange="toggleGenSelect(${i}, this.checked)">
         <span><strong>${esc(q.question)}</strong><br><span style="color:var(--muted)">${q.options.map((o,oi)=>`${(q.correctIndices||[]).includes(oi)?'&#10003;':'-'} ${esc(o)}`).join(' &nbsp; ')}</span></span>
       </label></div>`).join('')}
     <div class="btn-row">
       <button class="btn gold" onclick="commitPreview()">Add selected to bank</button>
-      <button class="btn outline" onclick="state.genPreview=[];renderPdf();">Cancel</button>
+      <button class="btn outline" onclick="cancelGenPreview()">Cancel</button>
     </div>
   </div>`;
 }
+
+window.toggleGenSelect = (i, checked) => { state.genPreview[i].selected = checked; };
+window.cancelGenPreview = () => { state.genPreview=[]; renderPdf(); };
 
 window.commitPreview = async () => {
   const topic = document.getElementById('pdf-topic') ? document.getElementById('pdf-topic').value.trim() : '';
@@ -649,6 +655,8 @@ async function finishExam(){
   state.examSession=null; renderExamResult();
 }
 
+window.dismissExamResult = (nextTab) => { state.examResult=null; setTab(nextTab); };
+
 function renderExamResult(){
   const r=state.examResult;
   document.getElementById('mainView').innerHTML = `
@@ -656,8 +664,8 @@ function renderExamResult(){
     <div class="big">${r.correctCount} / ${r.total}</div>
     <div class="note">Score: ${r.percent}%</div>
     <div class="btn-row" style="justify-content:center">
-      <button class="btn gold" onclick="state.examResult=null;setTab('exam');">Take another exam</button>
-      <button class="btn outline" onclick="state.examResult=null;setTab('results');">View results</button>
+      <button class="btn gold" onclick="dismissExamResult('exam')">Take another exam</button>
+      <button class="btn outline" onclick="dismissExamResult('results')">View results</button>
     </div>
   </div>
   <div class="card"><h2>Review</h2>
@@ -678,13 +686,15 @@ function renderExamResult(){
 /* ---------------- Results ---------------- */
 function renderResults(){
   document.getElementById('mainView').innerHTML = `
-  <div class="card"><h2>Your exam history</h2>
+  <div class="card"><h2>Everyone's results</h2>
     ${state.results.length? state.results.map(r=>`
       <div class="hist-row">
-        <span>${esc(r.topic)} — ${r.score}/${r.total}${r.createdAt?', '+fmtDate(r.createdAt):''}</span>
+        <span>
+          <strong>${esc(r.userName||'someone')}</strong> — ${esc(r.topic)} — ${r.score}/${r.total}${r.createdAt?', '+fmtDate(r.createdAt):''}
+        </span>
         <span style="display:flex;align-items:center;gap:14px">
           <strong class="hist-score" style="color:${r.percent>=60?'var(--approve)':'var(--seal)'}">${r.percent}%</strong>
-          <button class="del-btn" onclick="removeResult('${r.id}')">Delete</button>
+          ${r.uid===currentUser.uid? `<button class="del-btn" onclick="removeResult('${r.id}')">Delete</button>`:''}
         </span>
       </div>`).join('')
       : '<div class="empty">No exams taken yet.</div>'}
