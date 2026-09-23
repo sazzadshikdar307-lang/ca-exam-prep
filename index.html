@@ -114,6 +114,10 @@
   .hist-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--paper-alt);font-size:13.5px;}
   .hist-row:last-child{border-bottom:none;}
   .hist-score{font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .browse-row{cursor:pointer;transition:background .12s;margin:0 -8px;padding:11px 8px;border-radius:2px;}
+  .browse-row:hover{background:var(--paper-alt);}
+  .qtrace a{color:var(--brass);text-decoration:none;font-weight:600;}
+  .qtrace a:hover{text-decoration:underline;}
 
   .loading{display:flex;align-items:center;gap:10px;color:var(--muted);margin-top:12px;}
   .spinner{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--brass);border-radius:50%;animation:spin .8s linear infinite;}
@@ -229,9 +233,15 @@ const TABS = [
   { id:'dashboard', label:'Home' }, { id:'bank', label:'Bank' }, { id:'pdf', label:'From PDF' },
   { id:'exam', label:'Exam' }, { id:'results', label:'Results' }
 ];
-let state = { tab:'dashboard', questions:[], results:[], editingId:null, genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
+let state = { tab:'dashboard', questions:[], results:[], editingId:null,
+  bankView:{level:'subjects', subject:null, chapter:null}, bankSearch:'',
+  genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
 
-window.setTab = (id) => { state.tab = id; state.editingId=null; state.genError=''; state.genPreview=[]; loadForTab(id); };
+window.setTab = (id) => {
+  state.tab = id; state.editingId=null; state.genError=''; state.genPreview=[];
+  if(id!=='bank'){ state.bankSearch=''; state.bankView={level:'subjects', subject:null, chapter:null}; }
+  loadForTab(id);
+};
 
 function renderNav(){
   const nav = document.getElementById('navBar'); nav.innerHTML = '';
@@ -257,12 +267,31 @@ async function loadForTab(id){
   if (!currentUser) return;
   if (id==='dashboard'){ state.questions=await fetchQuestions(); state.results=await fetchResults(); renderDashboard(); }
   else if (id==='bank'){ state.questions=await fetchQuestions(); renderBank(); }
-  else if (id==='pdf'){ renderPdf(); }
+  else if (id==='pdf'){ state.questions=await fetchQuestions(); renderPdf(); }
   else if (id==='exam'){ if(state.examSession){renderExamRun();return;} if(state.examResult){renderExamResult();return;} state.questions=await fetchQuestions(); renderExamSetup(); }
   else if (id==='results'){ state.results=await fetchResults(); renderResults(); }
 }
 
 function topicsOf(list){ const s=new Set(); list.forEach(q=>s.add(q.topic||'General')); return Array.from(s); }
+function getSubjectChapter(q){
+  if(q.subject) return { subject: q.subject, chapter: q.chapter || 'General' };
+  const raw = (q.topic||'General').trim();
+  const m = raw.match(/^(.*)\(([^)]+)\)\s*$/);
+  if(m){
+    const chapter = m[1].replace(/[\s:\-–]+$/,'').trim();
+    return { subject: m[2].trim() || 'General', chapter: chapter || 'General' };
+  }
+  return { subject: raw || 'General', chapter: 'General' };
+}
+function allSubjects(list){
+  const s=new Set(); (list||state.questions).forEach(q=>s.add(getSubjectChapter(q).subject));
+  return Array.from(s).sort((a,b)=>a.localeCompare(b));
+}
+function allChaptersFor(subject, list){
+  const s=new Set();
+  (list||state.questions).forEach(q=>{ const sc=getSubjectChapter(q); if(subject==='__all__'||sc.subject===subject) s.add(sc.chapter); });
+  return Array.from(s).sort((a,b)=>a.localeCompare(b));
+}
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function getCorrectIndices(q){ return Array.isArray(q.correctIndices) ? q.correctIndices : [q.correctIndex]; }
 function sameSet(a,b){ if(a.length!==b.length) return false; const sa=[...a].sort(), sb=[...b].sort(); return sa.every((v,i)=>v===sb[i]); }
@@ -287,7 +316,7 @@ function renderDashboard(){
       <div class="stat"><div class="num">${total}</div><div class="lbl">Questions in shared bank</div></div>
       <div class="stat"><div class="num">${examsN}</div><div class="lbl">Your exams taken</div></div>
       <div class="stat"><div class="num">${avg}%</div><div class="lbl">Your average score</div></div>
-      <div class="stat"><div class="num">${topicsOf(state.questions).length}</div><div class="lbl">Topics</div></div>
+      <div class="stat"><div class="num">${allSubjects().length}</div><div class="lbl">Subjects</div></div>
     </div>
   </div>
   <div class="card"><h2>Get started</h2>
@@ -303,11 +332,20 @@ function renderDashboard(){
 function renderBank(){
   const editing = state.editingId ? state.questions.find(q=>q.id===state.editingId) : null;
   const eCorrect = editing ? getCorrectIndices(editing) : [0];
+  const eSC = editing ? getSubjectChapter(editing) : {subject:'', chapter:''};
+  const subjOptions = allSubjects();
+  const chapOptions = allChaptersFor('__all__');
+
   document.getElementById('mainView').innerHTML = `
   <div class="card">
     <h2>${editing? 'Edit question' : 'Add a question'}</h2>
     <label>Question</label><textarea id="qf-text" placeholder="e.g. Which of the following is a current asset?">${editing?esc(editing.question):''}</textarea>
-    <label>Topic (optional)</label><input type="text" id="qf-topic" value="${editing?esc(editing.topic||''):''}" placeholder="e.g. Financial Accounting">
+    <label>Subject</label>
+    <input type="text" id="qf-subject" list="subjectOptions" value="${esc(eSC.subject)}" placeholder="e.g. Assurance">
+    <datalist id="subjectOptions">${subjOptions.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+    <label>Chapter (optional)</label>
+    <input type="text" id="qf-chapter" list="chapterOptions" value="${esc(eSC.chapter==='General'?'':eSC.chapter)}" placeholder="e.g. Chapter 15: Integrity, objectivity and independence">
+    <datalist id="chapterOptions">${chapOptions.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
     <label>Options (at least 2 needed, up to 4 — tick the box next to every correct answer)</label>
     ${[0,1,2,3].map(i=>{
       const val = editing ? (editing.options[i]||'') : '';
@@ -321,34 +359,103 @@ function renderBank(){
       ${editing? `<button class="btn outline" onclick="cancelEdit()">Cancel</button>`:''}
     </div>
   </div>
-  <div class="card"><h2>Shared question bank (${state.questions.length})</h2>
-    ${state.questions.length? state.questions.map(q=>{
-      const correctSet=getCorrectIndices(q);
-      return `
-      <div class="qitem">
-        <div style="display:flex;justify-content:space-between;gap:10px">
-          <div>
-            <div class="qtext">${esc(q.question)}</div>
-            <div class="qopts">${q.options.map((o,i)=>`${correctSet.includes(i)?'&#10003; ':'- '}${esc(o)}`).join(' &nbsp;|&nbsp; ')}</div>
-            <div class="qmeta"><span class="tag">${esc(q.topic||'General')}</span></div>
-            <div class="qtrace">Added by ${esc(q.createdByName||'someone')}${q.createdAt?', '+fmtDate(q.createdAt):''}</div>
-            ${q.editCount? `<div class="qtrace">Edited ${q.editCount} time${q.editCount>1?'s':''} — last by ${esc(q.lastEditedByName||'someone')}${q.lastEditedAt?', '+fmtDate(q.lastEditedAt):''}</div>` : ''}
-          </div>
-          <div style="display:flex;gap:10px;flex-shrink:0;align-items:flex-start">
-            <button class="btn outline" style="margin:0;padding:5px 10px;font-size:12px" onclick="editQuestion('${q.id}')">Edit</button>
-            ${q.createdBy===currentUser.uid? `<button class="del-btn" onclick="removeQuestion('${q.id}')">Delete</button>`:''}
-          </div>
-        </div>
-      </div>`;}).join('') : '<div class="empty">No questions yet.</div>'}
+  <div class="card">
+    <h2>Shared question bank (${state.questions.length})</h2>
+    <input type="text" id="bank-search" value="${esc(state.bankSearch)}" oninput="onBankSearch(this.value)"
+      placeholder="Search questions, subjects, chapters...">
+    <div id="bankBrowse" style="margin-top:16px"></div>
+  </div>`;
+  renderBankBrowse();
+  const s = document.getElementById('bank-search');
+  if(document.activeElement===s){ const p=s.value.length; s.setSelectionRange(p,p); }
+}
+
+window.onBankSearch = (val) => {
+  state.bankSearch = val;
+  renderBankBrowse();
+  const el = document.getElementById('bank-search');
+  if(el){ el.focus(); const p=el.value.length; el.setSelectionRange(p,p); }
+};
+
+function qitemHtml(q){
+  const correctSet=getCorrectIndices(q);
+  const sc=getSubjectChapter(q);
+  return `
+  <div class="qitem">
+    <div style="display:flex;justify-content:space-between;gap:10px">
+      <div>
+        <div class="qtext">${esc(q.question)}</div>
+        <div class="qopts">${q.options.map((o,i)=>`${correctSet.includes(i)?'&#10003; ':'- '}${esc(o)}`).join(' &nbsp;|&nbsp; ')}</div>
+        <div class="qmeta"><span class="tag">${esc(sc.subject)}</span><span class="tag">${esc(sc.chapter)}</span></div>
+        <div class="qtrace">Added by ${esc(q.createdByName||'someone')}${q.createdAt?', '+fmtDate(q.createdAt):''}</div>
+        ${q.editCount? `<div class="qtrace">Edited ${q.editCount} time${q.editCount>1?'s':''} — last by ${esc(q.lastEditedByName||'someone')}${q.lastEditedAt?', '+fmtDate(q.lastEditedAt):''}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:10px;flex-shrink:0;align-items:flex-start">
+        <button class="btn outline" style="margin:0;padding:5px 10px;font-size:12px" onclick="editQuestion('${q.id}')">Edit</button>
+        ${q.createdBy===currentUser.uid? `<button class="del-btn" onclick="removeQuestion('${q.id}')">Delete</button>`:''}
+      </div>
+    </div>
   </div>`;
 }
+
+function renderBankBrowse(){
+  const wrap = document.getElementById('bankBrowse');
+  if(!wrap) return;
+  const term = state.bankSearch.trim().toLowerCase();
+
+  if(term){
+    const matches = state.questions.filter(q=>{
+      const sc=getSubjectChapter(q);
+      const hay = [q.question, sc.subject, sc.chapter, ...(q.options||[])].join(' ').toLowerCase();
+      return hay.includes(term);
+    });
+    wrap.innerHTML = `
+      <div class="qtrace" style="margin-bottom:10px">${matches.length} result${matches.length===1?'':'s'} for "${esc(state.bankSearch)}"</div>
+      ${matches.length? matches.map(qitemHtml).join('') : '<div class="empty">No matching questions.</div>'}`;
+    return;
+  }
+
+  const view = state.bankView;
+  if(view.level==='subjects'){
+    const subjects = allSubjects();
+    wrap.innerHTML = subjects.length? subjects.map(s=>{
+      const count = state.questions.filter(q=>getSubjectChapter(q).subject===s).length;
+      return `<div class="hist-row browse-row" onclick="drillSubject('${esc(s).replace(/'/g,"\\'")}')"><span>${esc(s)}</span><span class="hist-score">${count}</span></div>`;
+    }).join('') : '<div class="empty">No questions yet.</div>';
+  } else if(view.level==='chapters'){
+    const chapters = allChaptersFor(view.subject);
+    wrap.innerHTML = `
+      <div class="qtrace" style="margin-bottom:10px"><a href="#" onclick="bankBack('subjects');return false;">&larr; All subjects</a> / ${esc(view.subject)}</div>
+      ${chapters.length? chapters.map(c=>{
+        const count = state.questions.filter(q=>{const sc=getSubjectChapter(q); return sc.subject===view.subject && sc.chapter===c;}).length;
+        return `<div class="hist-row browse-row" onclick="drillChapter('${esc(c).replace(/'/g,"\\'")}')"><span>${esc(c)}</span><span class="hist-score">${count}</span></div>`;
+      }).join('') : '<div class="empty">No chapters yet.</div>'}`;
+  } else {
+    const items = state.questions.filter(q=>{ const sc=getSubjectChapter(q); return sc.subject===view.subject && sc.chapter===view.chapter; });
+    wrap.innerHTML = `
+      <div class="qtrace" style="margin-bottom:10px">
+        <a href="#" onclick="bankBack('subjects');return false;">&larr; All subjects</a> /
+        <a href="#" onclick="bankBack('chapters');return false;">${esc(view.subject)}</a> / ${esc(view.chapter)}
+      </div>
+      ${items.length? items.map(qitemHtml).join('') : '<div class="empty">No questions in this chapter.</div>'}`;
+  }
+}
+
+window.drillSubject = (subject) => { state.bankView = {level:'chapters', subject, chapter:null}; renderBankBrowse(); };
+window.drillChapter = (chapter) => { state.bankView.level='questions'; state.bankView.chapter=chapter; renderBankBrowse(); };
+window.bankBack = (toLevel) => {
+  if(toLevel==='subjects'){ state.bankView={level:'subjects', subject:null, chapter:null}; }
+  else { state.bankView.level='chapters'; state.bankView.chapter=null; }
+  renderBankBrowse();
+};
 
 window.editQuestion = (id) => { state.editingId=id; renderBank(); window.scrollTo({top:0, behavior:'smooth'}); };
 window.cancelEdit = () => { state.editingId=null; renderBank(); };
 
 window.submitQuestion = async () => {
   const text=document.getElementById('qf-text').value.trim();
-  const topic=document.getElementById('qf-topic').value.trim();
+  const subject=document.getElementById('qf-subject').value.trim() || 'General';
+  const chapter=document.getElementById('qf-chapter').value.trim() || 'General';
   const expl=document.getElementById('qf-expl').value.trim();
   const rawOpts=[0,1,2,3].map(i=>document.getElementById('qf-opt'+i).value.trim());
   const rawCorrect=Array.from(document.querySelectorAll('.qf-correct:checked')).map(el=>parseInt(el.value,10));
@@ -367,7 +474,7 @@ window.submitQuestion = async () => {
     if(state.editingId){
       const existing = state.questions.find(q=>q.id===state.editingId);
       await updateDoc(doc(db,'questions',state.editingId), {
-        question:text, options, correctIndices, topic:topic||'General', explanation:expl,
+        question:text, options, correctIndices, subject, chapter, explanation:expl,
         lastEditedBy: currentUser.uid,
         lastEditedByName: currentUser.displayName||currentUser.email,
         lastEditedAt: serverTimestamp(),
@@ -376,7 +483,7 @@ window.submitQuestion = async () => {
       state.editingId=null;
     } else {
       await addDoc(collection(db,'questions'), {
-        question:text, options, correctIndices, topic:topic||'General', explanation:expl,
+        question:text, options, correctIndices, subject, chapter, explanation:expl,
         source:'manual', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email,
         createdAt:serverTimestamp(), editCount:0
       });
@@ -426,7 +533,12 @@ function renderPdf(){
     <p class="note">Upload a PDF of notes or a textbook to auto-generate MCQs.</p>
     <label>PDF file</label><input type="file" id="pdf-file" accept="application/pdf">
     <label>How many questions</label><input type="number" id="pdf-count" value="8" min="3" max="12">
-    <label>Topic name (optional)</label><input type="text" id="pdf-topic" placeholder="e.g. Taxation">
+    <label>Subject</label>
+    <input type="text" id="pdf-subject" list="pdfSubjectOptions" placeholder="e.g. Taxation">
+    <datalist id="pdfSubjectOptions">${allSubjects().map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+    <label>Chapter (optional)</label>
+    <input type="text" id="pdf-chapter" list="pdfChapterOptions" placeholder="e.g. Chapter 4: Capital allowances">
+    <datalist id="pdfChapterOptions">${allChaptersFor('__all__').map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
     <button class="btn gold" id="pdf-btn" onclick="generateFromPdf()" ${key?'':'disabled'}>Generate questions</button>
     ${key?'':'<p class="note">Save an API key above first.</p>'}
     <div id="pdf-status"></div>
@@ -459,12 +571,14 @@ window.toggleGenSelect = (i, checked) => { state.genPreview[i].selected = checke
 window.cancelGenPreview = () => { state.genPreview=[]; renderPdf(); };
 
 window.commitPreview = async () => {
-  const topic = document.getElementById('pdf-topic') ? document.getElementById('pdf-topic').value.trim() : '';
+  const subject = document.getElementById('pdf-subject') ? document.getElementById('pdf-subject').value.trim() : '';
+  const chapter = document.getElementById('pdf-chapter') ? document.getElementById('pdf-chapter').value.trim() : '';
   const chosen = state.genPreview.filter(q=>q.selected);
   for (const q of chosen){
     await addDoc(collection(db,'questions'), {
       question:q.question, options:q.options, correctIndices:q.correctIndices, explanation:q.explanation||'',
-      topic: topic||'From PDF', source:'pdf', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email,
+      subject: subject||'From PDF', chapter: chapter||'General',
+      source:'pdf', createdBy:currentUser.uid, createdByName:currentUser.displayName||currentUser.email,
       createdAt: serverTimestamp(), editCount: 0
     });
   }
@@ -476,7 +590,6 @@ window.generateFromPdf = async () => {
   if(!apiKey){ alert('Save your API key first'); return; }
   const fileInput=document.getElementById('pdf-file');
   const count=Math.min(12,Math.max(3,parseInt(document.getElementById('pdf-count').value,10)||8));
-  const topic=document.getElementById('pdf-topic').value.trim();
   if(!fileInput.files.length){alert('Choose a PDF file');return;}
   const file=fileInput.files[0];
   if(file.type!=='application/pdf'){alert('Please upload a PDF file');return;}
@@ -546,30 +659,56 @@ window.generateFromPdf = async () => {
 
 /* ---------------- Exam ---------------- */
 function renderExamSetup(){
-  const t=topicsOf(state.questions);
+  const subjects = allSubjects();
   document.getElementById('mainView').innerHTML = `
   <div class="card"><h2>Set up exam</h2>
-    <label>Topic</label>
-    <select id="ex-topic"><option value="__all__">All topics (${state.questions.length})</option>
-      ${t.map(topic=>{const c=state.questions.filter(q=>(q.topic||'General')===topic).length;
-        return `<option value="${esc(topic)}">${esc(topic)} (${c})</option>`;}).join('')}
+    <label>Subject</label>
+    <select id="ex-subject" onchange="onExamSubjectChange()">
+      <option value="__all__">All subjects (${state.questions.length})</option>
+      ${subjects.map(s=>{
+        const c = state.questions.filter(q=>getSubjectChapter(q).subject===s).length;
+        return `<option value="${esc(s)}">${esc(s)} (${c})</option>`;
+      }).join('')}
     </select>
+    <label>Chapter</label>
+    <select id="ex-chapter"></select>
     <label>Number of questions</label><input type="number" id="ex-count" value="10" min="1">
     <label>Time per question</label>
     <select id="ex-time"><option value="0">No limit</option><option value="30">30s</option>
       <option value="45" selected>45s</option><option value="60">60s</option><option value="90">90s</option></select>
     <button class="btn gold" onclick="startExam()" ${state.questions.length===0?'disabled':''}>Start exam</button>
   </div>`;
+  onExamSubjectChange();
 }
 
+window.onExamSubjectChange = () => {
+  const subj = document.getElementById('ex-subject').value;
+  const chapterSel = document.getElementById('ex-chapter');
+  const chapters = allChaptersFor(subj);
+  const allCount = state.questions.filter(q=>subj==='__all__'||getSubjectChapter(q).subject===subj).length;
+  chapterSel.innerHTML = `<option value="__all__">All chapters (${allCount})</option>` + chapters.map(c=>{
+    const count = state.questions.filter(q=>{
+      const sc=getSubjectChapter(q);
+      return (subj==='__all__'||sc.subject===subj) && sc.chapter===c;
+    }).length;
+    return `<option value="${esc(c)}">${esc(c)} (${count})</option>`;
+  }).join('');
+};
+
 window.startExam = () => {
-  const topic=document.getElementById('ex-topic').value;
+  const subj=document.getElementById('ex-subject').value;
+  const chap=document.getElementById('ex-chapter').value;
   let count=parseInt(document.getElementById('ex-count').value,10)||10;
   const timeLimit=parseInt(document.getElementById('ex-time').value,10);
-  let pool = topic==='__all__'? state.questions.slice() : state.questions.filter(q=>(q.topic||'General')===topic);
+  let pool = state.questions.filter(q=>{
+    const sc=getSubjectChapter(q);
+    return (subj==='__all__'||sc.subject===subj) && (chap==='__all__'||sc.chapter===chap);
+  });
   pool = shuffle(pool); count=Math.min(count,pool.length); pool=pool.slice(0,count);
-  if(pool.length===0){alert('No questions in this topic');return;}
-  state.examSession = { questions:pool, topic: topic==='__all__'?'All topics':topic, index:0, answers:[], selected:[], revealed:false, timeLimit, timeLeft:timeLimit, timerId:null };
+  if(pool.length===0){alert('No questions in this selection');return;}
+  let topicLabel = subj==='__all__' ? 'All subjects' : subj;
+  if(chap!=='__all__') topicLabel += ' — ' + chap;
+  state.examSession = { questions:pool, topic: topicLabel, index:0, answers:[], selected:[], revealed:false, timeLimit, timeLeft:timeLimit, timerId:null };
   renderExamRun(); startTimer();
 };
 
