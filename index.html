@@ -235,11 +235,15 @@ const TABS = [
 ];
 let state = { tab:'dashboard', questions:[], results:[], editingId:null,
   bankView:{level:'subjects', subject:null, chapter:null}, bankSearch:'',
+  bankFilterSubject:'__all__', bankFilterChapter:'__all__',
   genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
 
 window.setTab = (id) => {
   state.tab = id; state.editingId=null; state.genError=''; state.genPreview=[];
-  if(id!=='bank'){ state.bankSearch=''; state.bankView={level:'subjects', subject:null, chapter:null}; }
+  if(id!=='bank'){
+    state.bankSearch=''; state.bankView={level:'subjects', subject:null, chapter:null};
+    state.bankFilterSubject='__all__'; state.bankFilterChapter='__all__';
+  }
   loadForTab(id);
 };
 
@@ -361,8 +365,18 @@ function renderBank(){
   </div>
   <div class="card">
     <h2>Shared question bank (${state.questions.length})</h2>
-    <input type="text" id="bank-search" value="${esc(state.bankSearch)}" oninput="onBankSearch(this.value)"
-      placeholder="Search questions, subjects, chapters...">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <input type="text" id="bank-search" value="${esc(state.bankSearch)}" oninput="onBankSearch(this.value)"
+        placeholder="Search questions, subjects, chapters..." style="flex:2;width:auto;min-width:200px">
+      <select id="bank-filter-subject" onchange="onBankFilterSubjectChange(this.value)" style="flex:1;width:auto;min-width:130px">
+        <option value="__all__">All subjects</option>
+        ${allSubjects().map(s=>`<option value="${esc(s)}" ${state.bankFilterSubject===s?'selected':''}>${esc(s)}</option>`).join('')}
+      </select>
+      <select id="bank-filter-chapter" onchange="onBankFilterChapterChange(this.value)" style="flex:1;width:auto;min-width:150px">
+        <option value="__all__">All chapters</option>
+        ${allChaptersFor(state.bankFilterSubject).map(c=>`<option value="${esc(c)}" ${state.bankFilterChapter===c?'selected':''}>${esc(c)}</option>`).join('')}
+      </select>
+    </div>
     <div id="bankBrowse" style="margin-top:16px"></div>
   </div>`;
   renderBankBrowse();
@@ -375,6 +389,16 @@ window.onBankSearch = (val) => {
   renderBankBrowse();
   const el = document.getElementById('bank-search');
   if(el){ el.focus(); const p=el.value.length; el.setSelectionRange(p,p); }
+};
+
+window.onBankFilterSubjectChange = (val) => {
+  state.bankFilterSubject = val;
+  state.bankFilterChapter = '__all__';
+  renderBank();
+};
+window.onBankFilterChapterChange = (val) => {
+  state.bankFilterChapter = val;
+  renderBankBrowse();
 };
 
 function qitemHtml(q){
@@ -402,15 +426,26 @@ function renderBankBrowse(){
   const wrap = document.getElementById('bankBrowse');
   if(!wrap) return;
   const term = state.bankSearch.trim().toLowerCase();
+  const fSubj = state.bankFilterSubject, fChap = state.bankFilterChapter;
+  const filtering = term || fSubj!=='__all__' || fChap!=='__all__';
 
-  if(term){
+  if(filtering){
     const matches = state.questions.filter(q=>{
       const sc=getSubjectChapter(q);
-      const hay = [q.question, sc.subject, sc.chapter, ...(q.options||[])].join(' ').toLowerCase();
-      return hay.includes(term);
+      if(fSubj!=='__all__' && sc.subject!==fSubj) return false;
+      if(fChap!=='__all__' && sc.chapter!==fChap) return false;
+      if(term){
+        const hay = [q.question, sc.subject, sc.chapter, ...(q.options||[])].join(' ').toLowerCase();
+        if(!hay.includes(term)) return false;
+      }
+      return true;
     });
+    const bits=[];
+    if(term) bits.push(`"${esc(state.bankSearch)}"`);
+    if(fSubj!=='__all__') bits.push(esc(fSubj));
+    if(fChap!=='__all__') bits.push(esc(fChap));
     wrap.innerHTML = `
-      <div class="qtrace" style="margin-bottom:10px">${matches.length} result${matches.length===1?'':'s'} for "${esc(state.bankSearch)}"</div>
+      <div class="qtrace" style="margin-bottom:10px">${matches.length} result${matches.length===1?'':'s'}${bits.length?' — '+bits.join(', '):''}</div>
       ${matches.length? matches.map(qitemHtml).join('') : '<div class="empty">No matching questions.</div>'}`;
     return;
   }
