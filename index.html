@@ -159,6 +159,7 @@
       <div class="login-card">
         <h2>Sign in to continue</h2>
         <p class="note">Sign in with Google to access the shared question bank and your personal exam history.</p>
+        <div id="accessDeniedBox"></div>
         <button class="google-btn" onclick="signInWithGoogle()">Sign in with Google</button>
       </div>
     </div>
@@ -183,15 +184,25 @@ const firebaseConfig = {
   appId: "1:262854448835:web:b579f71156bbdd43687476"
 };
 
+/* =========================================================
+   2) This is the ONLY account that can manage the access list
+      (add/remove allowed emails) from the Admin tab.
+      Set this to the exact Google email you sign in with.
+      It must also be set to the SAME email in firestore.rules
+      (the isAdmin() function there) or the two won't agree.
+   ========================================================= */
+const ADMIN_EMAIL = "sazzadshikdar307@gmail.com";
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, serverTimestamp
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, getDocs, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let app, auth, db, currentUser = null;
+let accessDeniedMsg = '';
 
 document.getElementById('ledgerDate').textContent =
   'As of ' + new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
@@ -205,9 +216,24 @@ if (!isConfigured) {
   auth = getAuth(app);
   db = getFirestore(app);
 
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
+      const email = (user.email || '').toLowerCase();
+      const isAdmin = email === ADMIN_EMAIL.toLowerCase();
+      let allowed = isAdmin;
+      if (!allowed) {
+        try {
+          const snap = await getDoc(doc(db, 'allowedEmails', email));
+          allowed = snap.exists();
+        } catch (e) { allowed = false; }
+      }
+      if (!allowed) {
+        accessDeniedMsg = "The Google account " + user.email + " isn't on the access list yet. Ask the site admin to add it, then sign in again.";
+        await signOut(auth);
+        return; // onAuthStateChanged fires again with user=null and shows the message below
+      }
+      currentUser = user;
+      currentUser.isAdmin = isAdmin;
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appScreen').style.display = 'block';
       document.getElementById('userbox').style.display = 'flex';
@@ -215,9 +241,15 @@ if (!isConfigured) {
       document.getElementById('username').textContent = user.displayName || user.email;
       loadForTab(state.tab);
     } else {
+      currentUser = null;
       document.getElementById('loginScreen').style.display = 'block';
       document.getElementById('appScreen').style.display = 'none';
       document.getElementById('userbox').style.display = 'none';
+      const box = document.getElementById('accessDeniedBox');
+      if (box) {
+        box.innerHTML = accessDeniedMsg ? `<div class="config-warning">${accessDeniedMsg}</div>` : '';
+      }
+      accessDeniedMsg = '';
     }
   });
 }
@@ -235,7 +267,7 @@ const TABS = [
 ];
 let state = { tab:'dashboard', questions:[], results:[], editingId:null,
   bankView:{level:'subjects', subject:null, chapter:null}, bankSearch:'',
-  bankFilterSubject:'__all__', bankFilterChapter:'__all__',
+  bankFilterSubject:'__all__', bankFilterChapter:'__all__', allowedEmails:[],
   genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
 
 window.setTab = (id) => {
@@ -249,7 +281,8 @@ window.setTab = (id) => {
 
 function renderNav(){
   const nav = document.getElementById('navBar'); nav.innerHTML = '';
-  TABS.forEach(t=>{
+  const tabs = currentUser && currentUser.isAdmin ? TABS.concat([{id:'admin', label:'Admin'}]) : TABS;
+  tabs.forEach(t=>{
     const b = document.createElement('button');
     b.textContent = t.label; if (t.id===state.tab) b.classList.add('active');
     b.onclick = () => setTab(t.id); nav.appendChild(b);
@@ -265,6 +298,10 @@ async function fetchResults(){
   const snap = await getDocs(query(collection(db,'results'), orderBy('createdAt','desc')));
   return snap.docs.map(d=>({id:d.id, ...d.data()}));
 }
+async function fetchAllowedEmails(){
+  const snap = await getDocs(collection(db,'allowedEmails'));
+  return snap.docs.map(d=>({ email:d.id, ...d.data() })).sort((a,b)=>a.email.localeCompare(b.email));
+}
 
 async function loadForTab(id){
   renderNav();
@@ -274,6 +311,11 @@ async function loadForTab(id){
   else if (id==='pdf'){ state.questions=await fetchQuestions(); renderPdf(); }
   else if (id==='exam'){ if(state.examSession){renderExamRun();return;} if(state.examResult){renderExamResult();return;} state.questions=await fetchQuestions(); renderExamSetup(); }
   else if (id==='results'){ state.results=await fetchResults(); renderResults(); }
+  else if (id==='admin'){
+    if(!currentUser.isAdmin){ setTab('dashboard'); return; }
+    state.allowedEmails = await fetchAllowedEmails();
+    renderAdmin();
+  }
 }
 
 function topicsOf(list){ const s=new Set(); list.forEach(q=>s.add(q.topic||'General')); return Array.from(s); }
@@ -879,6 +921,51 @@ window.removeResult = async (id) => {
   if(!confirm('Delete this exam result? This cannot be undone.')) return;
   try{ await deleteDoc(doc(db,'results',id)); setTab('results'); }
   catch(e){ alert('Could not delete: '+e.message); }
+};
+
+/* ---------------- Admin: access list ---------------- */
+function renderAdmin(){
+  document.getElementById('mainView').innerHTML = `
+  <div class="card">
+    <h2>Admin — who can sign in</h2>
+    <p class="note">Only your admin account (${esc(ADMIN_EMAIL)}) and the Google emails listed below can sign in and use this site. Anyone else who opens the link will be turned away at sign-in.</p>
+    <label>Add an email</label>
+    <div class="btn-row" style="margin-top:0">
+      <input type="text" id="admin-email-input" placeholder="name@example.com" style="flex:2;width:auto">
+      <button class="btn gold" style="margin-top:0" onclick="addAllowedEmail()">Add</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Allowed emails (${state.allowedEmails.length})</h2>
+    ${state.allowedEmails.length? state.allowedEmails.map(e=>`
+      <div class="hist-row">
+        <span>${esc(e.email)}</span>
+        <span style="display:flex;align-items:center;gap:14px">
+          <span class="qtrace">${e.addedByName?'added by '+esc(e.addedByName):''}</span>
+          <button class="del-btn" onclick="removeAllowedEmail('${esc(e.email).replace(/'/g,"\\'")}')">Remove</button>
+        </span>
+      </div>`).join('')
+      : '<div class="empty">No one added yet — only your admin account can sign in right now.</div>'}
+  </div>`;
+}
+
+window.addAllowedEmail = async () => {
+  const input = document.getElementById('admin-email-input');
+  const email = input.value.trim().toLowerCase();
+  if(!email || !email.includes('@') || !email.includes('.')){ alert('Enter a valid email address'); return; }
+  try{
+    await setDoc(doc(db,'allowedEmails', email), {
+      addedBy: currentUser.uid, addedByName: currentUser.displayName||currentUser.email, addedAt: serverTimestamp()
+    });
+    input.value='';
+    setTab('admin');
+  }catch(e){ alert('Could not add: '+e.message); }
+};
+
+window.removeAllowedEmail = async (email) => {
+  if(!confirm('Remove access for '+email+'? They will no longer be able to sign in.')) return;
+  try{ await deleteDoc(doc(db,'allowedEmails', email)); setTab('admin'); }
+  catch(e){ alert('Could not remove: '+e.message); }
 };
 </script>
 </body>
