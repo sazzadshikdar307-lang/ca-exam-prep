@@ -116,6 +116,9 @@
   .hist-score{font-family:'JetBrains Mono',monospace;font-weight:600;}
   .browse-row{cursor:pointer;transition:background .12s;margin:0 -8px;padding:11px 8px;border-radius:2px;}
   .browse-row:hover{background:var(--paper-alt);}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:9px;vertical-align:1px;}
+  .dot.on{background:var(--approve);}
+  .dot.off{background:var(--line);}
   .qtrace a{color:var(--brass);text-decoration:none;font-weight:600;}
   .qtrace a:hover{text-decoration:underline;}
 
@@ -239,9 +242,11 @@ if (!isConfigured) {
       document.getElementById('userbox').style.display = 'flex';
       document.getElementById('userphoto').src = user.photoURL || '';
       document.getElementById('username').textContent = user.displayName || user.email;
+      startPresenceHeartbeat();
       loadForTab(state.tab);
     } else {
       currentUser = null;
+      stopPresenceHeartbeat();
       document.getElementById('loginScreen').style.display = 'block';
       document.getElementById('appScreen').style.display = 'none';
       document.getElementById('userbox').style.display = 'none';
@@ -260,6 +265,29 @@ window.signInWithGoogle = async () => {
 };
 window.signOutUser = () => signOut(auth);
 
+/* ---------------- Presence (who's online) ---------------- */
+let presenceIntervalId = null;
+function startPresenceHeartbeat(){
+  const beat = () => {
+    if(!currentUser) return;
+    setDoc(doc(db,'presence',currentUser.uid), {
+      name: currentUser.displayName || currentUser.email,
+      lastSeen: serverTimestamp()
+    }).catch(()=>{});
+  };
+  beat();
+  clearInterval(presenceIntervalId);
+  presenceIntervalId = setInterval(beat, 30000);
+}
+function stopPresenceHeartbeat(){
+  clearInterval(presenceIntervalId);
+  presenceIntervalId = null;
+}
+async function fetchPresence(){
+  const snap = await getDocs(collection(db,'presence'));
+  return snap.docs.map(d=>({uid:d.id, ...d.data()}));
+}
+
 /* ---------------- App state & tabs ---------------- */
 const TABS = [
   { id:'dashboard', label:'Home' }, { id:'bank', label:'Bank' }, { id:'pdf', label:'From PDF' },
@@ -267,15 +295,17 @@ const TABS = [
 ];
 let state = { tab:'dashboard', questions:[], results:[], editingId:null,
   bankView:{level:'subjects', subject:null, chapter:null}, bankSearch:'',
-  bankFilterSubject:'__all__', bankFilterChapter:'__all__', allowedEmails:[],
+  bankFilterSubject:'__all__', bankFilterChapter:'__all__', allowedEmails:[], presence:[],
   genPreview:[], genLoading:false, genError:'', examSession:null, examResult:null };
 
+let liveRefreshId = null;
 window.setTab = (id) => {
   state.tab = id; state.editingId=null; state.genError=''; state.genPreview=[];
   if(id!=='bank'){
     state.bankSearch=''; state.bankView={level:'subjects', subject:null, chapter:null};
     state.bankFilterSubject='__all__'; state.bankFilterChapter='__all__';
   }
+  clearInterval(liveRefreshId); liveRefreshId=null;
   loadForTab(id);
 };
 
@@ -306,7 +336,10 @@ async function fetchAllowedEmails(){
 async function loadForTab(id){
   renderNav();
   if (!currentUser) return;
-  if (id==='dashboard'){ state.questions=await fetchQuestions(); state.results=await fetchResults(); renderDashboard(); }
+  if (id==='dashboard'){
+    state.questions=await fetchQuestions(); state.results=await fetchResults();
+    renderDashboard();
+  }
   else if (id==='bank'){ state.questions=await fetchQuestions(); renderBank(); }
   else if (id==='pdf'){ state.questions=await fetchQuestions(); renderPdf(); }
   else if (id==='exam'){ if(state.examSession){renderExamRun();return;} if(state.examResult){renderExamResult();return;} state.questions=await fetchQuestions(); renderExamSetup(); }
@@ -314,7 +347,13 @@ async function loadForTab(id){
   else if (id==='admin'){
     if(!currentUser.isAdmin){ setTab('dashboard'); return; }
     state.allowedEmails = await fetchAllowedEmails();
+    state.presence = await fetchPresence();
     renderAdmin();
+    liveRefreshId = setInterval(async ()=>{
+      if(state.tab!=='admin') return;
+      state.presence = await fetchPresence();
+      renderAdmin();
+    }, 30000);
   }
 }
 
@@ -349,6 +388,18 @@ function fmtDate(ts){
       d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   }catch(e){ return ''; }
 }
+function fmtAgo(ts){
+  const d = ts && typeof ts.toDate === 'function' ? ts.toDate() : null;
+  if(!d) return 'unknown';
+  const diff = Math.max(0, Date.now() - d.getTime());
+  const mins = Math.floor(diff/60000);
+  if(mins<1) return 'just now';
+  if(mins<60) return mins+' min ago';
+  const hrs = Math.floor(mins/60);
+  if(hrs<24) return hrs+' hr'+(hrs>1?'s':'')+' ago';
+  const days = Math.floor(hrs/24);
+  return days+' day'+(days>1?'s':'')+' ago';
+}
 
 /* ---------------- Dashboard ---------------- */
 function renderDashboard(){
@@ -356,6 +407,7 @@ function renderDashboard(){
   const myResults = state.results.filter(r=>r.uid===currentUser.uid);
   const examsN=myResults.length;
   const avg = examsN? Math.round(myResults.reduce((s,r)=>s+r.percent,0)/examsN):0;
+
   document.getElementById('mainView').innerHTML = `
   <div class="card"><h2>At a glance</h2>
     <div class="stat-grid">
@@ -925,7 +977,24 @@ window.removeResult = async (id) => {
 
 /* ---------------- Admin: access list ---------------- */
 function renderAdmin(){
+  const ONLINE_WINDOW = 90*1000;
+  const withStatus = state.presence.map(p=>{
+    const d = p.lastSeen && typeof p.lastSeen.toDate === 'function' ? p.lastSeen.toDate() : null;
+    const online = d ? (Date.now()-d.getTime()) < ONLINE_WINDOW : false;
+    return {...p, online, lastSeenMs: d?d.getTime():0};
+  }).sort((a,b)=> (b.online-a.online) || (b.lastSeenMs-a.lastSeenMs));
+  const onlineCount = withStatus.filter(p=>p.online).length;
+
   document.getElementById('mainView').innerHTML = `
+  <div class="card">
+    <h2>Who's here (${onlineCount} online)</h2>
+    <p class="note">Visible only to you. Refreshes automatically while this tab is open.</p>
+    ${withStatus.length? withStatus.map(p=>`
+      <div class="hist-row">
+        <span><span class="dot ${p.online?'on':'off'}"></span>${esc(p.name||'someone')}</span>
+        <span class="qtrace">${p.online?'Online now':'Last seen '+fmtAgo(p.lastSeen)}</span>
+      </div>`).join('') : '<div class="empty">No activity yet.</div>'}
+  </div>
   <div class="card">
     <h2>Admin — who can sign in</h2>
     <p class="note">Only your admin account (${esc(ADMIN_EMAIL)}) and the Google emails listed below can sign in and use this site. Anyone else who opens the link will be turned away at sign-in.</p>
